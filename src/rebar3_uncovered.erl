@@ -61,9 +61,7 @@ format_error(Reason) -> io_lib:format("~p", [Reason]).
 
 opts() ->
     [
-        {git, $g, "git", string,
-            "Only uncovered lines in git diff:"
-            " all, staged, unstaged (default: all)"},
+        {git, $g, "git", boolean, "Only show uncovered lines in git diff"},
         {coverage, undefined, "coverage", {string, "aggregate"},
             "Coverage source: aggregate, eunit, ct"},
         {color, undefined, "color", {string, "auto"},
@@ -79,8 +77,8 @@ desc() ->
 
     Displays source code of uncovered lines with syntax
     highlighting and surrounding context. Supports
-    filtering by git diff, coverage source, and file
-    paths.
+    filtering by git diff, coverage source, and file path
+    filters.
 
     Positional arguments are used as file or directory
     filters.
@@ -103,14 +101,11 @@ validate_format_value("human") -> human;
 validate_format_value("raw") -> raw;
 validate_format_value(Other) -> error({invalid_option, format, Other}).
 
--spec resolve_git(proplists:proplist()) -> false | all | staged | unstaged.
+-spec resolve_git(proplists:proplist()) -> false | all.
 resolve_git(Opts) -> resolve_git_value(proplists:get_value(git, Opts)).
 
-resolve_git_value(undefined) -> false;
-resolve_git_value("all") -> all;
-resolve_git_value("staged") -> staged;
-resolve_git_value("unstaged") -> unstaged;
-resolve_git_value(Other) -> error({invalid_option, git, Other}).
+resolve_git_value(true) -> all;
+resolve_git_value(_) -> false.
 
 -spec resolve_color(proplists:proplist()) -> boolean().
 resolve_color(Opts) ->
@@ -125,7 +120,7 @@ resolve_color_value("auto") ->
         io:columns() =/= {error, enotsup}.
 
 -spec maybe_filter_git(
-    [rebar3_uncovered_cover:uncovered_line()], false | all | staged | unstaged
+    [rebar3_uncovered_cover:uncovered_line()], false | all
 ) -> [rebar3_uncovered_cover:uncovered_line()].
 maybe_filter_git(Uncovered, false) ->
     Uncovered;
