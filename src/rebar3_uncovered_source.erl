@@ -8,9 +8,27 @@
 }.
 
 % API
--export([read_regions/2]).
+-export([resolve_files/2, read_regions/2]).
 
 %--- API -----------------------------------------------------------------------
+
+resolve_files(UncoveredLines, Apps) ->
+    % elp:ignore W0017
+    SourceDirs = [
+        filename:join(rebar_app_info:dir(App), "src")
+     || App <:- Apps
+    ],
+    lists:filtermap(
+        fun(#{module := Mod, line := Line}) ->
+            case find_source(Mod, SourceDirs) of
+                {ok, File} ->
+                    {true, #{module => Mod, file => File, line => Line}};
+                error ->
+                    false
+            end
+        end,
+        UncoveredLines
+    ).
 
 read_regions(UncoveredLines, Context) ->
     Grouped = group_by_file(UncoveredLines),
@@ -71,3 +89,16 @@ line_status(Line, UncoveredLines) ->
         true -> uncovered;
         false -> covered
     end.
+
+find_source(Mod, SourceDirs) ->
+    Filename = atom_to_list(Mod) ++ ".erl",
+    Paths = [
+        Path
+     || Dir <:- SourceDirs,
+        Path <:- [filename:join(Dir, Filename)],
+        filelib:is_file(Path)
+    ],
+    find_source_result(Paths).
+
+find_source_result([File | _]) -> {ok, File};
+find_source_result([]) -> error.
