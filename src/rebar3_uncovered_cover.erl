@@ -13,9 +13,6 @@
 
 %--- API -----------------------------------------------------------------------
 
--spec uncovered_lines(Source, Apps) -> [uncovered_line()] when
-    Source :: aggregate | eunit | ct,
-    Apps :: [term()].
 uncovered_lines(Source, Apps) ->
     {Pattern, Name} = coverdata_pattern(Source),
     case coverdata_files(Pattern, Apps) of
@@ -34,30 +31,25 @@ uncovered_lines(Source, Apps) ->
 
 %--- Internal ------------------------------------------------------------------
 
--spec imported_modules() -> [module()].
 imported_modules() ->
     Modules = cover:imported_modules(),
     true = is_list(Modules),
     Modules.
 
--spec coverdata_files(string(), [term()]) -> [file:filename()].
 coverdata_files(Pattern, [App | _]) ->
     % elp:ignore W0017
     Dir = rebar_app_info:dir(App),
     CoverDir = filename:join([Dir, "_build", "test", "cover"]),
     filelib:wildcard(filename:join(CoverDir, Pattern)).
 
--spec coverdata_pattern(aggregate | eunit | ct) -> {string(), string()}.
 coverdata_pattern(aggregate) -> {"*.coverdata", "aggregate"};
 coverdata_pattern(eunit) -> {"eunit.coverdata", "EUnit"};
 coverdata_pattern(ct) -> {"ct.coverdata", "Common Test"}.
 
--spec source_dirs([term()]) -> [file:filename()].
 source_dirs(Apps) ->
     % elp:ignore W0017
     [filename:join(rebar_app_info:dir(App), "src") || App <:- Apps].
 
--spec module_uncovered(module(), [file:filename()]) -> [uncovered_line()].
 module_uncovered(Mod, SourceDirs) ->
     module_uncovered(Mod, SourceDirs, cover:analyse(Mod, coverage, line)).
 
@@ -74,7 +66,6 @@ module_uncovered_source(Mod, Analysis, {ok, File}) ->
 module_uncovered_source(_Mod, _Analysis, error) ->
     [].
 
--spec find_source(module(), [file:filename()]) -> {ok, file:filename()} | error.
 find_source(Mod, SourceDirs) ->
     Filename = atom_to_list(Mod) ++ ".erl",
     Paths = [

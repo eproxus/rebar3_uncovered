@@ -12,9 +12,6 @@
 
 %--- API -----------------------------------------------------------------------
 
--spec read_regions(
-    [rebar3_uncovered_cover:uncovered_line()], non_neg_integer()
-) -> [uncovered_region()].
 read_regions(UncoveredLines, Context) ->
     Grouped = group_by_file(UncoveredLines),
     lists:flatmap(
@@ -24,8 +21,6 @@ read_regions(UncoveredLines, Context) ->
 
 %--- Internal ------------------------------------------------------------------
 
--spec group_by_file([rebar3_uncovered_cover:uncovered_line()]) ->
-    #{file:filename() => [pos_integer()]}.
 group_by_file(Lines) ->
     lists:foldl(
         fun(#{file := File, line := Line}, Acc) ->
@@ -35,8 +30,6 @@ group_by_file(Lines) ->
         Lines
     ).
 
--spec file_regions(file:filename(), [pos_integer()], non_neg_integer()) ->
-    [uncovered_region()].
 file_regions(File, UncoveredLines, Context) ->
     case file:read_file(File) of
         {ok, Content} ->
@@ -48,16 +41,11 @@ file_regions(File, UncoveredLines, Context) ->
             []
     end.
 
--spec group_consecutive([pos_integer()], non_neg_integer()) ->
-    [[pos_integer()]].
 group_consecutive([], _Context) ->
     [];
 group_consecutive([First | Rest], Context) ->
     group_consecutive(Rest, Context, [First], []).
 
--spec group_consecutive(
-    [pos_integer()], non_neg_integer(), [pos_integer()], [[pos_integer()]]
-) -> [[pos_integer()]].
 group_consecutive([], _Context, Current, Acc) ->
     lists:reverse([lists:reverse(Current) | Acc]);
 group_consecutive([Line | Rest], Context, [Prev | _] = Current, Acc) when
@@ -67,8 +55,6 @@ group_consecutive([Line | Rest], Context, [Prev | _] = Current, Acc) when
 group_consecutive([Line | Rest], Context, Current, Acc) ->
     group_consecutive(Rest, Context, [Line], [lists:reverse(Current) | Acc]).
 
--spec build_region(file:filename(), [pos_integer()], [binary()]) ->
-    uncovered_region().
 build_region(File, UncoveredLines, AllLines) ->
     First = hd(UncoveredLines),
     Last = lists:last(UncoveredLines),

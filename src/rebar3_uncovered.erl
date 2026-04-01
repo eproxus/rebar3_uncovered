@@ -10,7 +10,6 @@
 
 %--- Callbacks -----------------------------------------------------------------
 
--spec init(term()) -> {ok, term()}.
 init(State) ->
     Provider =
         providers:create([
@@ -26,7 +25,6 @@ init(State) ->
     % elp:ignore W0017
     {ok, rebar_state:add_provider(State, Provider)}.
 
--spec do(term()) -> {ok, term()}.
 do(State) ->
     % elp:ignore W0017
     {Opts, PathFilters} = rebar_state:command_parsed_args(State),
@@ -54,7 +52,6 @@ do(State) ->
     end,
     {ok, State}.
 
--spec format_error(term()) -> iolist().
 format_error(Reason) -> io_lib:format("~p", [Reason]).
 
 %--- Internal ------------------------------------------------------------------
@@ -84,7 +81,6 @@ desc() ->
     filters.
     """.
 
--spec validate_coverage(proplists:proplist()) -> aggregate | eunit | ct.
 validate_coverage(Opts) ->
     validate_coverage_value(proplists:get_value(coverage, Opts, "aggregate")).
 
@@ -93,7 +89,6 @@ validate_coverage_value("eunit") -> eunit;
 validate_coverage_value("ct") -> ct;
 validate_coverage_value(Other) -> error({invalid_option, coverage, Other}).
 
--spec validate_format(proplists:proplist()) -> human | raw.
 validate_format(Opts) ->
     validate_format_value(proplists:get_value(format, Opts, "human")).
 
@@ -101,13 +96,11 @@ validate_format_value("human") -> human;
 validate_format_value("raw") -> raw;
 validate_format_value(Other) -> error({invalid_option, format, Other}).
 
--spec resolve_git(proplists:proplist()) -> false | all.
 resolve_git(Opts) -> resolve_git_value(proplists:get_value(git, Opts)).
 
 resolve_git_value(true) -> all;
 resolve_git_value(_) -> false.
 
--spec resolve_color(proplists:proplist()) -> boolean().
 resolve_color(Opts) ->
     resolve_color_value(proplists:get_value(color, Opts, "auto")).
 
@@ -119,9 +112,6 @@ resolve_color_value("auto") ->
     not is_list(os:getenv("NO_COLOR")) andalso
         io:columns() =/= {error, enotsup}.
 
--spec maybe_filter_git(
-    [rebar3_uncovered_cover:uncovered_line()], false | all
-) -> [rebar3_uncovered_cover:uncovered_line()].
 maybe_filter_git(Uncovered, false) ->
     Uncovered;
 maybe_filter_git(Uncovered, Mode) ->
@@ -132,9 +122,6 @@ maybe_filter_git(Uncovered, Mode) ->
         lists:member(LineNo, maps:get(File, Changed, []))
     ].
 
--spec filter_paths(
-    [rebar3_uncovered_cover:uncovered_line()], [string()]
-) -> [rebar3_uncovered_cover:uncovered_line()].
 filter_paths(Uncovered, []) ->
     Uncovered;
 filter_paths(Uncovered, Filters) ->
@@ -143,6 +130,5 @@ filter_paths(Uncovered, Filters) ->
      || #{file := File} = Line <:- Uncovered, matches_any_filter(File, Filters)
     ].
 
--spec matches_any_filter(file:filename(), [string()]) -> boolean().
 matches_any_filter(File, Filters) ->
     lists:any(fun(Filter) -> lists:prefix(Filter, File) end, Filters).
