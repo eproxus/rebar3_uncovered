@@ -56,7 +56,7 @@ file_regions(File, UncoveredLines, Context) ->
             AllLines = binary:split(Content, ~"\n", [global]),
             Sorted = lists:usort(UncoveredLines),
             Groups = group_consecutive(Sorted, Context),
-            [build_region(File, Group, AllLines) || Group <:- Groups];
+            [build_region(File, Group, AllLines, Context) || Group <:- Groups];
         {error, _} ->
             []
     end.
@@ -75,9 +75,9 @@ group_consecutive([Line | Rest], Context, [Prev | _] = Current, Acc) when
 group_consecutive([Line | Rest], Context, Current, Acc) ->
     group_consecutive(Rest, Context, [Line], [lists:reverse(Current) | Acc]).
 
-build_region(File, UncoveredLines, AllLines) ->
-    First = hd(UncoveredLines),
-    Last = lists:last(UncoveredLines),
+build_region(File, UncoveredLines, AllLines, Context) ->
+    First = max(1, hd(UncoveredLines) - Context),
+    Last = min(length(AllLines), lists:last(UncoveredLines) + Context),
     #{
         file => File,
         lines => [
