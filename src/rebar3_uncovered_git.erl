@@ -3,6 +3,10 @@
 % API
 -export([changed_lines/1]).
 
+-ifdef(TEST).
+-export([parse_diff/1]).
+-endif.
+
 %--- API -----------------------------------------------------------------------
 
 changed_lines(Mode) ->
@@ -11,7 +15,9 @@ changed_lines(Mode) ->
 
 %--- Internal ------------------------------------------------------------------
 
-git_diff(all) -> os:cmd("git diff -U0 --no-color --no-ext-diff HEAD").
+git_diff(all) -> os:cmd("git diff -U0 --no-color --no-ext-diff HEAD");
+git_diff(staged) -> os:cmd("git diff -U0 --no-color --no-ext-diff --cached");
+git_diff(unstaged) -> os:cmd("git diff -U0 --no-color --no-ext-diff").
 
 parse_diff(Output) ->
     Lines = string:split(Output, "\n", all),

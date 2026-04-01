@@ -30,7 +30,14 @@ format_raw(Regions, #{counts := ShowCounts}) ->
     ]).
 
 format_raw_line(File, {N, Source, Status, Count}, ShowCounts) ->
-    [File, raw_sep(Status), integer_to_list(N), " ", raw_count(ShowCounts, Status, Count), Source].
+    [
+        File,
+        raw_sep(Status),
+        integer_to_list(N),
+        " ",
+        raw_count(ShowCounts, Status, Count),
+        Source
+    ].
 
 raw_sep(uncovered) -> ":";
 raw_sep(covered) -> ":".
@@ -42,7 +49,10 @@ raw_count(false, _Status, _Count) -> "".
 format_human(Regions, Opts) ->
     Widths = compute_widths(Regions),
     Groups = group_by_file(Regions),
-    lists:join("\n", [format_file_group(File, Rs, Opts, Widths) || {File, Rs} <:- Groups]).
+    lists:join("\n", [
+        format_file_group(File, Rs, Opts, Widths)
+     || {File, Rs} <:- Groups
+    ]).
 
 format_file_group(
     File,
@@ -81,7 +91,15 @@ group_by_file([#{file := F} = R | Rest], PrevFile, Current, Acc) ->
 collapse_line(LW, CW, C) ->
     DotSep = fg(~"┊", border, C),
     Ellipsis = dim(~"⋮", C),
-    [" ", lists:duplicate(LW - 1, " "), Ellipsis, " ", DotSep, collapse_count(CW, DotSep), "\n"].
+    [
+        " ",
+        lists:duplicate(LW - 1, " "),
+        Ellipsis,
+        " ",
+        DotSep,
+        collapse_count(CW, DotSep),
+        "\n"
+    ].
 
 collapse_count(0, _DotSep) -> "";
 collapse_count(CW, DotSep) -> [lists:duplicate(CW, " "), DotSep].

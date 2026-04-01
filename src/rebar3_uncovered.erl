@@ -28,12 +28,16 @@ init(State) ->
 do(State) ->
     % elp:ignore W0017
     {Opts, PathFilters} = rebar_state:command_parsed_args(State),
-    Coverage = validate_coverage(Opts),
-    Format = validate_format(Opts),
-    Color = resolve_color(Opts),
-    Context = proplists:get_value(context, Opts, 2),
-    ShowCounts = proplists:get_value(counts, Opts, true),
-    GitMode = resolve_git(Opts),
+    Coverage = opt(coverage, Opts),
+    Format = opt(format, Opts),
+    Color = opt(color, Opts),
+    Context = opt(context, Opts),
+    ShowCounts = opt(counts, Opts),
+    GitMode =
+        case proplists:get_value(git, Opts) of
+            true -> opt(git_scope, Opts);
+            _ -> false
+        end,
 
     % elp:ignore W0017
     Apps = rebar_state:project_apps(State),
@@ -65,7 +69,9 @@ format_error(Reason) -> io_lib:format("~p", [Reason]).
 
 opts() ->
     [
-        {git, $g, "git", boolean, "Only show uncovered lines in git diff"},
+        {git, $g, "git", boolean, "Filter by git diff"},
+        {git_scope, undefined, "git-scope", {string, "all"},
+            "Git diff scope: staged, all, unstaged"},
         {coverage, undefined, "coverage", {string, "aggregate"},
             "Coverage source: aggregate, eunit, ct"},
         {color, undefined, "color", {string, "auto"},
@@ -89,36 +95,31 @@ desc() ->
     filters.
     """.
 
-validate_coverage(Opts) ->
-    validate_coverage_value(proplists:get_value(coverage, Opts, "aggregate")).
+opt(Name, Opts) -> opt_value(Name, proplists:get_value(Name, Opts)).
 
-validate_coverage_value("aggregate") -> aggregate;
-validate_coverage_value("eunit") -> eunit;
-validate_coverage_value("ct") -> ct;
-validate_coverage_value(Other) -> error({invalid_option, coverage, Other}).
+opt_value(coverage, undefined) -> aggregate;
+opt_value(coverage, "aggregate") -> aggregate;
+opt_value(coverage, "eunit") -> eunit;
+opt_value(coverage, "ct") -> ct;
+opt_value(format, undefined) -> human;
+opt_value(format, "human") -> human;
+opt_value(format, "raw") -> raw;
+opt_value(color, undefined) -> resolve_auto_color();
+opt_value(color, "always") -> true;
+opt_value(color, "never") -> false;
+opt_value(color, "auto") -> resolve_auto_color();
+opt_value(context, undefined) -> 2;
+opt_value(context, N) when is_integer(N), N >= 0 -> N;
+opt_value(counts, undefined) -> true;
+opt_value(counts, B) when is_boolean(B) -> B;
+opt_value(git_scope, undefined) -> all;
+opt_value(git_scope, "staged") -> staged;
+opt_value(git_scope, "all") -> all;
+opt_value(git_scope, "unstaged") -> unstaged;
+opt_value(Name, Value) -> error({invalid_option, Name, Value}).
 
-validate_format(Opts) ->
-    validate_format_value(proplists:get_value(format, Opts, "human")).
-
-validate_format_value("human") -> human;
-validate_format_value("raw") -> raw;
-validate_format_value(Other) -> error({invalid_option, format, Other}).
-
-resolve_git(Opts) -> resolve_git_value(proplists:get_value(git, Opts)).
-
-resolve_git_value(true) -> all;
-resolve_git_value(_) -> false.
-
-resolve_color(Opts) ->
-    resolve_color_value(proplists:get_value(color, Opts, "auto")).
-
-resolve_color_value("always") ->
-    true;
-resolve_color_value("never") ->
-    false;
-resolve_color_value("auto") ->
-    not is_list(os:getenv("NO_COLOR")) andalso
-        io:columns() =/= {error, enotsup}.
+resolve_auto_color() ->
+    os:getenv("NO_COLOR") =:= false andalso io:columns() =/= {error, enotsup}.
 
 resolve_columns() ->
     case io:columns() of
