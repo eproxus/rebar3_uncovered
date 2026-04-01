@@ -13,8 +13,8 @@
 %--- API -----------------------------------------------------------------------
 
 resolve_files(UncoveredLines, Apps) ->
-    % elp:ignore W0017
     SourceDirs = [
+        % elp:ignore W0017
         filename:join(rebar_app_info:dir(App), "src")
      || App <:- Apps
     ],
