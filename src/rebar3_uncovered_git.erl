@@ -6,33 +6,29 @@
 %--- API -----------------------------------------------------------------------
 
 changed_lines(Mode) ->
-    Root = repo_root(),
     Output = git_diff(Mode),
-    parse_diff(Output, Root).
+    parse_diff(Output).
 
 %--- Internal ------------------------------------------------------------------
 
-repo_root() ->
-    string:trim(os:cmd("git rev-parse --show-toplevel"), both).
-
 git_diff(all) -> os:cmd("git diff -U0 --no-color --no-ext-diff HEAD").
 
-parse_diff(Output, Root) ->
+parse_diff(Output) ->
     Lines = string:split(Output, "\n", all),
-    parse_lines(Lines, Root, undefined, #{}).
+    parse_lines(Lines, undefined, #{}).
 
-parse_lines([], _Root, _File, Acc) ->
+parse_lines([], _File, Acc) ->
     Acc;
-parse_lines(["+++ b/" ++ Path | Rest], Root, _File, Acc) ->
-    parse_lines(Rest, Root, filename:join(Root, Path), Acc);
-parse_lines(["@@ " ++ _ = Line | Rest], Root, File, Acc) when
+parse_lines(["+++ b/" ++ Path | Rest], _File, Acc) ->
+    parse_lines(Rest, Path, Acc);
+parse_lines(["@@ " ++ _ = Line | Rest], File, Acc) when
     File =/= undefined
 ->
     LineNos = parse_hunk(Line),
     Existing = maps:get(File, Acc, []),
-    parse_lines(Rest, Root, File, Acc#{File => Existing ++ LineNos});
-parse_lines([_ | Rest], Root, File, Acc) ->
-    parse_lines(Rest, Root, File, Acc).
+    parse_lines(Rest, File, Acc#{File => Existing ++ LineNos});
+parse_lines([_ | Rest], File, Acc) ->
+    parse_lines(Rest, File, Acc).
 
 parse_hunk(Line) ->
     case

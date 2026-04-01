@@ -20,12 +20,29 @@ uncovered_lines(Source, Apps) ->
             rebar_api:warn("No ~s coverdata files found", [Name]),
             [];
         Files ->
-            lists:foreach(fun cover:import/1, Files),
-            Modules = imported_modules(),
-            lists:flatmap(fun module_uncovered/1, Modules)
+            silence_cover(fun() ->
+                lists:foreach(fun cover:import/1, Files),
+                Modules = imported_modules(),
+                lists:flatmap(fun module_uncovered/1, Modules)
+            end)
     end.
 
 %--- Internal ------------------------------------------------------------------
+
+silence_cover(Fun) ->
+    Pid = cover_pid(cover:start()),
+    {group_leader, OldGL} = erlang:process_info(Pid, group_leader),
+    {ok, Null} = file:open("/dev/null", [write]),
+    erlang:group_leader(Null, Pid),
+    try
+        Fun()
+    after
+        erlang:group_leader(OldGL, Pid),
+        file:close(Null)
+    end.
+
+cover_pid({ok, Pid}) -> Pid;
+cover_pid({error, {already_started, Pid}}) -> Pid.
 
 imported_modules() ->
     Modules = cover:imported_modules(),

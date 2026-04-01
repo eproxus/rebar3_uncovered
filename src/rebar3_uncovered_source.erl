@@ -18,10 +18,12 @@ resolve_files(UncoveredLines, Apps) ->
         filename:join(rebar_app_info:dir(App), "src")
      || App <:- Apps
     ],
+    {ok, Cwd} = file:get_cwd(),
     lists:filtermap(
         fun(#{module := Mod, line := Line}) ->
             case find_source(Mod, SourceDirs) of
-                {ok, File} ->
+                {ok, AbsFile} ->
+                    File = make_relative(AbsFile, Cwd),
                     {true, #{module => Mod, file => File, line => Line}};
                 error ->
                     false
@@ -102,3 +104,10 @@ find_source(Mod, SourceDirs) ->
 
 find_source_result([File | _]) -> {ok, File};
 find_source_result([]) -> error.
+
+make_relative(Path, Base) ->
+    Prefix = Base ++ "/",
+    case lists:prefix(Prefix, Path) of
+        true -> lists:nthtail(length(Prefix), Path);
+        false -> Path
+    end.
