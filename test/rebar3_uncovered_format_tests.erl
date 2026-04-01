@@ -74,6 +74,35 @@ human_format_non_executable_line_test() ->
         iolist_to_binary(format(Regions, human, false))
     ).
 
+%--- Tests: counts flag --------------------------------------------------------
+
+human_format_no_counts_test() ->
+    ?assertEqual(
+        ~"""
+        src/foo.erl
+           1   line1
+           2 > line2
+
+        """,
+        iolist_to_binary(format([region()], human, false, false))
+    ).
+
+raw_format_no_counts_test() ->
+    Regions = [
+        #{
+            file => ~"src/foo.erl",
+            lines => [{2, ~"line2", uncovered, 0}, {3, ~"line3", uncovered, 0}]
+        }
+    ],
+    ?assertEqual(
+        ~b"""
+        src/foo.erl:2\tline2
+        src/foo.erl:3\tline3
+
+        """,
+        iolist_to_binary(format(Regions, raw, false, false))
+    ).
+
 %--- Tests: color --------------------------------------------------------------
 
 human_color_uncovered_test() ->
@@ -109,7 +138,11 @@ region() ->
         ]
     }.
 
-format(Regions, Format, Color) ->
+format(Regions, Format, Color) -> format(Regions, Format, Color, true).
+
+format(Regions, Format, Color, Counts) ->
     rebar3_uncovered_format:format_lines(
-        Regions, #{format => Format, color => Color, context => 2}
+        Regions, #{
+            format => Format, color => Color, context => 2, counts => Counts
+        }
     ).

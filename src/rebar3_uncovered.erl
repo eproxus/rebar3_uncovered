@@ -32,6 +32,7 @@ do(State) ->
     Format = validate_format(Opts),
     Color = resolve_color(Opts),
     Context = proplists:get_value(context, Opts, 2),
+    ShowCounts = proplists:get_value(counts, Opts, true),
     GitMode = resolve_git(Opts),
 
     % elp:ignore W0017
@@ -46,7 +47,12 @@ do(State) ->
     Regions = rebar3_uncovered_source:read_regions(Uncovered3, Context, Counts),
     case
         rebar3_uncovered_format:format_lines(
-            Regions, #{format => Format, color => Color, context => Context}
+            Regions, #{
+                format => Format,
+                color => Color,
+                context => Context,
+                counts => ShowCounts
+            }
         )
     of
         [] -> ok;
@@ -68,7 +74,8 @@ opts() ->
             "Color output: auto, always, never"},
         {format, $f, "format", {string, "human"}, "Output format: human, raw"},
         {context, $C, "context", {integer, 2},
-            "Number of surrounding context lines"}
+            "Number of surrounding context lines"},
+        {counts, undefined, "counts", {boolean, true}, "Show coverage counts"}
     ].
 
 desc() ->
