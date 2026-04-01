@@ -44,7 +44,6 @@ After every change
 
 * Format the code: `mise run format`
 * Lint: `mise run --output=keep-order verify`
-* Docs: `mise run docs`
 * Test: `mise run --output=keep-order test`
 * Ensure all modified code is covered by tests by reading the text files in
   `_build/test/cover/{eunit,aggregate}/*.txt`

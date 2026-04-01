@@ -46,6 +46,9 @@ module_uncovered(Mod) ->
     module_uncovered(Mod, cover:analyse(Mod, coverage, line)).
 
 module_uncovered(Mod, {ok, Analysis}) ->
-    [#{module => Mod, line => Line} || {{_, Line}, {0, _}} <:- Analysis];
+    [
+        #{module => Mod, line => Line}
+     || {{_, Line}, {Cov, _}} <:- Analysis, Cov =:= 0
+    ];
 module_uncovered(_Mod, {error, _}) ->
     [].
