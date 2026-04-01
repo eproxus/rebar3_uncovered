@@ -26,19 +26,19 @@ format_lines(Regions, #{format := human} = Opts) ->
 format_raw(Regions) ->
     [
         [File, ":", integer_to_list(N), "\t", Source, "\n"]
-     || #{file := File, lines := Lines} <- Regions,
-        {N, Source, uncovered} <- Lines
+     || #{file := File, lines := Lines} <:- Regions,
+        {N, Source, uncovered} <:- Lines
     ].
 
 -spec format_human([rebar3_uncovered_source:uncovered_region()], format_opts()) ->
     iodata().
 format_human(Regions, Opts) ->
-    lists:join("\n", [format_region(R, Opts) || R <- Regions]).
+    lists:join("\n", [format_region(R, Opts) || R <:- Regions]).
 
 -spec format_region(rebar3_uncovered_source:uncovered_region(), format_opts()) ->
     iodata().
 format_region(#{file := File, lines := Lines}, Opts) ->
-    FormattedLines = [format_line(L, Opts) || L <- Lines],
+    FormattedLines = [format_line(L, Opts) || L <:- Lines],
     [File, "\n" | FormattedLines].
 
 -spec format_line(

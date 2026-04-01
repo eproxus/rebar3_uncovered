@@ -43,7 +43,7 @@ file_regions(File, UncoveredLines, Context) ->
             AllLines = binary:split(Content, ~"\n", [global]),
             Sorted = lists:usort(UncoveredLines),
             Groups = group_consecutive(Sorted, Context),
-            [build_region(File, Group, AllLines) || Group <- Groups];
+            [build_region(File, Group, AllLines) || Group <:- Groups];
         {error, _} ->
             []
     end.
@@ -76,7 +76,7 @@ build_region(File, UncoveredLines, AllLines) ->
         file => File,
         lines => [
             {N, lists:nth(N, AllLines), line_status(N, UncoveredLines)}
-         || N <- lists:seq(First, Last)
+         || N <:- lists:seq(First, Last)
         ]
     }.
 

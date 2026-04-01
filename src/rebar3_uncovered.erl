@@ -10,7 +10,6 @@
 
 %--- Callbacks -----------------------------------------------------------------
 
-% elp:ignore W0017 (rebar_state is provided by the host rebar3 process)
 -spec init(term()) -> {ok, term()}.
 init(State) ->
     Provider =
@@ -20,35 +19,16 @@ init(State) ->
             {bare, true},
             {deps, [compile, app_discovery]},
             {example, "rebar3 uncovered"},
-            {opts, [
-                {git, $g, "git", string,
-                    "Only uncovered lines in git diff:"
-                    " all, staged, unstaged (default: all)"},
-                {coverage, undefined, "coverage", {string, "aggregate"},
-                    "Coverage source: aggregate, eunit, ct"},
-                {color, undefined, "color", {string, "auto"},
-                    "Color output: auto, always, never"},
-                {format, $f, "format", {string, "human"},
-                    "Output format: human, raw"},
-                {context, $C, "context", {integer, 2},
-                    "Number of surrounding context lines"}
-            ]},
+            {opts, opts()},
             {short_desc, "Report uncovered lines from tests"},
-            {desc,
-                "Report uncovered lines from tests.\n"
-                "\n"
-                "Displays source code of uncovered lines with syntax\n"
-                "highlighting and surrounding context. Supports\n"
-                "filtering by git diff, coverage source, and file\n"
-                "paths.\n"
-                "\n"
-                "Positional arguments are used as file or directory\n"
-                "filters."}
+            {desc, desc()}
         ]),
+    % elp:ignore W0017
     {ok, rebar_state:add_provider(State, Provider)}.
 
 -spec do(term()) -> {ok, term()}.
 do(State) ->
+    % elp:ignore W0017
     {Opts, PathFilters} = rebar_state:command_parsed_args(State),
     Coverage = validate_coverage(Opts),
     Format = validate_format(Opts),
@@ -56,22 +36,55 @@ do(State) ->
     Context = proplists:get_value(context, Opts, 2),
     GitMode = resolve_git(Opts),
 
+    % elp:ignore W0017
     Apps = rebar_state:project_apps(State),
     Uncovered0 = rebar3_uncovered_cover:uncovered_lines(Coverage, Apps),
     Uncovered1 = maybe_filter_git(Uncovered0, GitMode),
     Uncovered2 = filter_paths(Uncovered1, PathFilters),
 
     Regions = rebar3_uncovered_source:read_regions(Uncovered2, Context),
-    Output = rebar3_uncovered_format:format_lines(
-        Regions, #{format => Format, color => Color, context => Context}
-    ),
-    rebar_api:console("~s", [Output]),
+    case
+        rebar3_uncovered_format:format_lines(
+            Regions, #{format => Format, color => Color, context => Context}
+        )
+    of
+        [] -> ok;
+        % elp:ignore W0017
+        Output -> rebar_api:console("~s", [Output])
+    end,
     {ok, State}.
 
 -spec format_error(term()) -> iolist().
 format_error(Reason) -> io_lib:format("~p", [Reason]).
 
 %--- Internal ------------------------------------------------------------------
+
+opts() ->
+    [
+        {git, $g, "git", string,
+            "Only uncovered lines in git diff:"
+            " all, staged, unstaged (default: all)"},
+        {coverage, undefined, "coverage", {string, "aggregate"},
+            "Coverage source: aggregate, eunit, ct"},
+        {color, undefined, "color", {string, "auto"},
+            "Color output: auto, always, never"},
+        {format, $f, "format", {string, "human"}, "Output format: human, raw"},
+        {context, $C, "context", {integer, 2},
+            "Number of surrounding context lines"}
+    ].
+
+desc() ->
+    ~"""
+    Report uncovered lines from tests.
+
+    Displays source code of uncovered lines with syntax
+    highlighting and surrounding context. Supports
+    filtering by git diff, coverage source, and file
+    paths.
+
+    Positional arguments are used as file or directory
+    filters.
+    """.
 
 -spec validate_coverage(proplists:proplist()) -> aggregate | eunit | ct.
 validate_coverage(Opts) ->
