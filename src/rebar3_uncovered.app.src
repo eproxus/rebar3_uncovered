@@ -1,0 +1,11 @@
+{application, rebar3_uncovered, [
+    {description,
+        "A Rebar 3 plugin that reports on uncovered lines from tests"},
+    {vsn, "0.1.0"},
+    {registered, []},
+    {applications, [kernel, stdlib]},
+    {env, []},
+    {modules, []},
+    {licenses, ["MIT"]},
+    {links, [{"GitHub", "https://github.com/eproxus/rebar3_uncovered"}]}
+]}.

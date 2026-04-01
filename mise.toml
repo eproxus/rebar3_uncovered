@@ -1,0 +1,46 @@
+[tools]
+erlang = "28"
+rebar = "3.27.0"
+markdownlint-cli2 = "latest"
+shellcheck = "latest"
+shfmt = "latest"
+yamllint = "latest"
+"ubi:whatsapp/erlang-language-platform" = { version = "latest", exe = "elp" }
+
+[tasks.format]
+description = "Format all code"
+run = """
+rebar3 fmt
+mise fmt
+"""
+
+[tasks."verify:rebar"]
+description = "Run rebar3 verification checks"
+run = """
+rebar3 compile
+rebar3 fmt --check
+rebar3 plugins upgrade --all
+rebar3 lint
+rebar3 hank
+rebar3 dialyzer
+rebar3 as test xref
+"""
+
+[tasks."verify:elp"]
+description = "Run ELP checks"
+run = """
+elp lint
+elp eqwalize-all
+"""
+
+[tasks."verify:markdown"]
+description = "Lint Markdown files"
+run = 'markdownlint-cli2 "**/*.md" "!_build" "!tmp"'
+
+[tasks."verify:yaml"]
+description = "Lint YAML files"
+run = "yamllint --strict -c .yamllint.yml ."
+
+[tasks.verify]
+description = "Run all verification checks"
+depends = ["verify:rebar", "verify:elp", "verify:markdown", "verify:yaml"]
