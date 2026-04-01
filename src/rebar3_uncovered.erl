@@ -45,19 +45,17 @@ do(State) ->
     Uncovered3 = filter_paths(Uncovered2, PathFilters),
 
     Regions = rebar3_uncovered_source:read_regions(Uncovered3, Context, Counts),
-    case
-        rebar3_uncovered_format:format_lines(
-            Regions, #{
-                format => Format,
-                color => Color,
-                context => Context,
-                counts => ShowCounts
-            }
-        )
-    of
+    FormatOpts = #{
+        format => Format,
+        color => Color,
+        context => Context,
+        counts => ShowCounts,
+        columns => resolve_columns()
+    },
+    case rebar3_uncovered_format:format_lines(Regions, FormatOpts) of
         [] -> ok;
         % elp:ignore W0017
-        Output -> rebar_api:console("~s", [Output])
+        Output -> rebar_api:console("~ts", [Output])
     end,
     {ok, State}.
 
@@ -121,6 +119,12 @@ resolve_color_value("never") ->
 resolve_color_value("auto") ->
     not is_list(os:getenv("NO_COLOR")) andalso
         io:columns() =/= {error, enotsup}.
+
+resolve_columns() ->
+    case io:columns() of
+        {ok, Cols} -> Cols;
+        {error, enotsup} -> 80
+    end.
 
 maybe_filter_git(Uncovered, false) ->
     Uncovered;
