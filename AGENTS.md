@@ -29,13 +29,24 @@ elp lint --diagnostic-filter W0023 --apply-fix  # Apply a specific elp fix by co
 
 ## Changes
 
+Before making changes:
+
+* Run tests with `mise run --output=keep-order test` and establish a code
+  coverage baseline
+
 When making changes:
 
 * When refactoring, check if multiple lines can be joined and still stay under
   the length limit. When in doubt, prefer longer lines over shorter lines, the
   formatter will split them
 
-After every change:
+After every change
 
 * Format the code: `mise run format`
 * Lint: `mise run --output=keep-order verify`
+* Docs: `mise run docs`
+* Test: `mise run --output=keep-order test`
+* Ensure all modified code is covered by tests by reading the text files in
+  `_build/test/cover/{eunit,aggregate}/*.txt`
+* For substantial changes or new features, verify that coverage did not go down
+  from the baseline
