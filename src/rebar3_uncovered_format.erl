@@ -22,9 +22,18 @@ format_lines(Regions, #{format := human} = Opts) ->
 
 format_raw(Regions) ->
     [
-        [File, ":", integer_to_list(N), "\t", Source, "\n"]
+        [
+            File,
+            ":",
+            integer_to_list(N),
+            "\t",
+            integer_to_list(Count),
+            "\t",
+            Source,
+            "\n"
+        ]
      || #{file := File, lines := Lines} <:- Regions,
-        {N, Source, uncovered} <:- Lines
+        {N, Source, uncovered, Count} <:- Lines
     ].
 
 format_human(Regions, Opts) ->
@@ -34,11 +43,15 @@ format_region(#{file := File, lines := Lines}, Opts) ->
     FormattedLines = [format_line(L, Opts) || L <:- Lines],
     [File, "\n" | FormattedLines].
 
-format_line({N, Source, Status}, #{color := Color}) ->
+format_line({N, Source, Status, Count}, #{color := Color}) ->
     LineNo = io_lib:format("~4w", [N]),
+    CountStr = format_count(Count),
     Marker = marker(Status),
-    Line = [LineNo, " ", Marker, " ", Source, "\n"],
+    Line = [LineNo, " ", CountStr, " ", Marker, " ", Source, "\n"],
     maybe_colorize(Line, Status, Color).
+
+format_count(none) -> "     ";
+format_count(N) -> io_lib:format("~5w", [N]).
 
 marker(uncovered) -> ">";
 marker(covered) -> " ".

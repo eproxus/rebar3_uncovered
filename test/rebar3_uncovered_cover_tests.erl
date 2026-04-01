@@ -10,11 +10,15 @@ uncovered_lines_test_() ->
     {setup, fun setup/0, fun cleanup/1, fun(App) ->
         [
             {"eunit returns uncovered lines", fun() ->
-                Result = rebar3_uncovered_cover:uncovered_lines(eunit, [App]),
+                {Result, _} = rebar3_uncovered_cover:uncovered_lines(eunit, [
+                    App
+                ]),
                 ?assert(length(Result) > 0)
             end},
             {"all entries have module and line keys", fun() ->
-                Result = rebar3_uncovered_cover:uncovered_lines(eunit, [App]),
+                {Result, _} = rebar3_uncovered_cover:uncovered_lines(eunit, [
+                    App
+                ]),
                 lists:foreach(
                     fun(Entry) ->
                         ?assertMatch(#{module := _, line := _}, Entry),
@@ -26,7 +30,9 @@ uncovered_lines_test_() ->
                 )
             end},
             {"contains known uncovered line", fun() ->
-                Result = rebar3_uncovered_cover:uncovered_lines(eunit, [App]),
+                {Result, _} = rebar3_uncovered_cover:uncovered_lines(eunit, [
+                    App
+                ]),
                 ?assert(
                     lists:any(
                         fun(#{module := Mod, line := Line}) ->
@@ -37,18 +43,40 @@ uncovered_lines_test_() ->
                 )
             end},
             {"aggregate matches wildcard pattern", fun() ->
-                Result = rebar3_uncovered_cover:uncovered_lines(
+                {Result, _} = rebar3_uncovered_cover:uncovered_lines(
                     aggregate, [App]
                 ),
                 ?assert(length(Result) > 0)
             end},
             {"includes multiple modules with uncovered lines", fun() ->
-                Result = rebar3_uncovered_cover:uncovered_lines(eunit, [App]),
+                {Result, _} = rebar3_uncovered_cover:uncovered_lines(eunit, [
+                    App
+                ]),
                 Modules = lists:usort([
                     Mod
                  || #{module := Mod} <:- Result
                 ]),
                 ?assert(length(Modules) > 1)
+            end},
+            {"counts map has entries for all analyzed modules", fun() ->
+                {_, Counts} = rebar3_uncovered_cover:uncovered_lines(eunit, [
+                    App
+                ]),
+                ?assert(map_size(Counts) > 0),
+                maps:foreach(
+                    fun(Mod, ModCounts) ->
+                        ?assert(is_atom(Mod)),
+                        ?assert(is_map(ModCounts)),
+                        maps:foreach(
+                            fun(Line, Cov) ->
+                                ?assert(is_integer(Line) andalso Line > 0),
+                                ?assert(is_integer(Cov) andalso Cov >= 0)
+                            end,
+                            ModCounts
+                        )
+                    end,
+                    Counts
+                )
             end}
         ]
     end}.
@@ -56,15 +84,17 @@ uncovered_lines_test_() ->
 no_coverdata_test_() ->
     {setup, fun setup_empty/0, fun cleanup/1, fun(App) ->
         [
-            {"no coverdata returns empty list", fun() ->
+            {"no coverdata returns empty tuple", fun() ->
                 ?assertEqual(
-                    [], rebar3_uncovered_cover:uncovered_lines(eunit, [App])
+                    {[], #{}},
+                    rebar3_uncovered_cover:uncovered_lines(eunit, [App])
                 )
             end},
             {"ct pattern does not match eunit file", fun() ->
                 App1 = make_app(fixture_dir(~"cover_app")),
                 ?assertEqual(
-                    [], rebar3_uncovered_cover:uncovered_lines(ct, [App1])
+                    {[], #{}},
+                    rebar3_uncovered_cover:uncovered_lines(ct, [App1])
                 )
             end}
         ]

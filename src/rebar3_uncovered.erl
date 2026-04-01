@@ -36,12 +36,14 @@ do(State) ->
 
     % elp:ignore W0017
     Apps = rebar_state:project_apps(State),
-    Uncovered0 = rebar3_uncovered_cover:uncovered_lines(Coverage, Apps),
+    {Uncovered0, Counts} = rebar3_uncovered_cover:uncovered_lines(
+        Coverage, Apps
+    ),
     Uncovered1 = rebar3_uncovered_source:resolve_files(Uncovered0, Apps),
     Uncovered2 = maybe_filter_git(Uncovered1, GitMode),
     Uncovered3 = filter_paths(Uncovered2, PathFilters),
 
-    Regions = rebar3_uncovered_source:read_regions(Uncovered3, Context),
+    Regions = rebar3_uncovered_source:read_regions(Uncovered3, Context, Counts),
     case
         rebar3_uncovered_format:format_lines(
             Regions, #{format => Format, color => Color, context => Context}

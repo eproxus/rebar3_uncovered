@@ -1,11 +1,13 @@
 -module(rebar3_uncovered_cover).
 
--export_type([uncovered_line/0]).
+-export_type([uncovered_line/0, line_counts/0]).
 
 -type uncovered_line() :: #{
     module := module(),
     line := pos_integer()
 }.
+
+-type line_counts() :: #{module() => #{pos_integer() => non_neg_integer()}}.
 
 % API
 -export([uncovered_lines/2]).
@@ -18,12 +20,14 @@ uncovered_lines(Source, Apps) ->
         [] ->
             % elp:ignore W0017
             rebar_api:warn("No ~s coverdata files found", [Name]),
-            [];
+            {[], #{}};
         Files ->
             silence_cover(fun() ->
                 lists:foreach(fun cover:import/1, Files),
                 Modules = imported_modules(),
-                lists:flatmap(fun module_uncovered/1, Modules)
+                Uncovered = lists:flatmap(fun module_uncovered/1, Modules),
+                Counts = maps:from_list([{M, module_counts(M)} || M <:- Modules]),
+                {Uncovered, Counts}
             end)
     end.
 
@@ -69,3 +73,10 @@ module_uncovered(Mod, {ok, Analysis}) ->
     ];
 module_uncovered(_Mod, {error, _}) ->
     [].
+
+module_counts(Mod) -> analyse_counts(cover:analyse(Mod, coverage, line)).
+
+analyse_counts({ok, Analysis}) ->
+    #{Line => Cov || {{_, Line}, {Cov, _}} <:- Analysis};
+analyse_counts({error, _}) ->
+    #{}.

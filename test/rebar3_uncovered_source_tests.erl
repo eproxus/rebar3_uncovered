@@ -17,7 +17,7 @@ resolve_files_filters_unknown_modules_test() ->
 
 read_regions_zero_context_test() ->
     Regions = read_regions([5], 0),
-    ?assertMatch([#{lines := [{5, _, uncovered}]}], Regions).
+    ?assertMatch([#{lines := [{5, _, uncovered, _}]}], Regions).
 
 read_regions_context_adds_surrounding_lines_test() ->
     Regions = read_regions([9], 2),
@@ -30,7 +30,7 @@ read_regions_context_adds_surrounding_lines_test() ->
             {10, covered},
             {11, covered}
         ],
-        [{N, S} || {N, _, S} <- Lines]
+        [{N, S} || {N, _, S, _} <- Lines]
     ).
 
 read_regions_context_clamps_to_file_bounds_test() ->
@@ -70,7 +70,8 @@ read_regions(LineNos, Context) ->
     App = make_app(fixture_dir(~"source_app")),
     Input = [#{module => mymod, line => N} || N <- LineNos],
     Resolved = rebar3_uncovered_source:resolve_files(Input, [App]),
-    rebar3_uncovered_source:read_regions(Resolved, Context).
+    Counts = #{mymod => #{N => 0 || N <- LineNos}},
+    rebar3_uncovered_source:read_regions(Resolved, Context, Counts).
 
 make_app(Dir) ->
     {ok, App0} = rebar_app_info:new(test_app, "0.0.0"),

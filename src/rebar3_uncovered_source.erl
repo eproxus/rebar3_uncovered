@@ -4,11 +4,13 @@
 
 -type uncovered_region() :: #{
     file := file:filename(),
-    lines := [{pos_integer(), binary(), covered | uncovered}]
+    lines := [
+        {pos_integer(), binary(), covered | uncovered, non_neg_integer() | none}
+    ]
 }.
 
 % API
--export([resolve_files/2, read_regions/2]).
+-export([resolve_files/2, read_regions/3]).
 
 %--- API -----------------------------------------------------------------------
 
@@ -32,10 +34,13 @@ resolve_files(UncoveredLines, Apps) ->
         UncoveredLines
     ).
 
-read_regions(UncoveredLines, Context) ->
+read_regions(UncoveredLines, Context, Counts) ->
     Grouped = group_by_file(UncoveredLines),
     lists:flatmap(
-        fun({File, Lines}) -> file_regions(File, Lines, Context) end,
+        fun({File, {Mod, Lines}}) ->
+            ModCounts = maps:get(Mod, Counts, #{}),
+            file_regions(File, Lines, Context, ModCounts)
+        end,
         maps:to_list(Grouped)
     ).
 
@@ -43,20 +48,28 @@ read_regions(UncoveredLines, Context) ->
 
 group_by_file(Lines) ->
     lists:foldl(
-        fun(#{file := File, line := Line}, Acc) ->
-            maps:update_with(File, fun(Ls) -> [Line | Ls] end, [Line], Acc)
+        fun(#{file := File, module := Mod, line := Line}, Acc) ->
+            maps:update_with(
+                File,
+                fun({M, Ls}) -> {M, [Line | Ls]} end,
+                {Mod, [Line]},
+                Acc
+            )
         end,
         #{},
         Lines
     ).
 
-file_regions(File, UncoveredLines, Context) ->
+file_regions(File, UncoveredLines, Context, ModCounts) ->
     case file:read_file(File) of
         {ok, Content} ->
             AllLines = binary:split(Content, ~"\n", [global]),
             Sorted = lists:usort(UncoveredLines),
             Groups = group_consecutive(Sorted, Context),
-            [build_region(File, Group, AllLines, Context) || Group <:- Groups];
+            [
+                build_region(File, Group, AllLines, Context, ModCounts)
+             || Group <:- Groups
+            ];
         {error, _} ->
             []
     end.
@@ -75,13 +88,14 @@ group_consecutive([Line | Rest], Context, [Prev | _] = Current, Acc) when
 group_consecutive([Line | Rest], Context, Current, Acc) ->
     group_consecutive(Rest, Context, [Line], [lists:reverse(Current) | Acc]).
 
-build_region(File, UncoveredLines, AllLines, Context) ->
+build_region(File, UncoveredLines, AllLines, Context, ModCounts) ->
     First = max(1, hd(UncoveredLines) - Context),
     Last = min(length(AllLines), lists:last(UncoveredLines) + Context),
     #{
         file => File,
         lines => [
-            {N, lists:nth(N, AllLines), line_status(N, UncoveredLines)}
+            {N, lists:nth(N, AllLines), line_status(N, UncoveredLines),
+                maps:get(N, ModCounts, none)}
          || N <:- lists:seq(First, Last)
         ]
     }.
