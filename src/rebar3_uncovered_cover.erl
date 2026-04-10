@@ -1,39 +1,63 @@
 -module(rebar3_uncovered_cover).
 
--export_type([uncovered_line/0, line_counts/0]).
+-export_type([line_map/0]).
 
--type uncovered_line() :: #{
-    module := module(),
-    line := pos_integer()
-}.
-
--type line_counts() :: #{module() => #{pos_integer() => non_neg_integer()}}.
+-type line_info() :: #{count := non_neg_integer(), show => true}.
+-type line_map() :: #{file:filename() => #{pos_integer() => line_info()}}.
 
 % API
--export([uncovered_lines/1]).
+-export([analyse_lines/1]).
 
 %--- API -----------------------------------------------------------------------
 
-uncovered_lines(#{opts := #{coverage := Source}, apps := Apps} = S) ->
+analyse_lines(#{opts := #{coverage := Source}, apps := Apps} = S) ->
     {Pattern, Name} = coverdata_pattern(Source),
     case coverdata_files(Pattern, Apps) of
         [] ->
             % elp:ignore W0017
-            rebar_api:warn("No ~s coverdata files found", [Name]),
-            S#{lines => [], counts => #{}};
+            rebar_api:abort(
+                "No ~s coverdata files found. Did you run tests?", [Name]
+            );
         Files ->
-            silence_cover(fun() ->
-                lists:foreach(fun cover:import/1, Files),
-                Modules = imported_modules(),
-                Uncovered = lists:flatmap(fun module_uncovered/1, Modules),
-                Counts = lists:foldl(
-                    fun(M, Acc) -> Acc#{M => module_counts(M)} end, #{}, Modules
-                ),
-                S#{lines => Uncovered, counts => Counts}
-            end)
+            SourceDirs = source_dirs(Apps),
+            {ok, Cwd} = file:get_cwd(),
+            S#{files => import_and_analyse(Files, SourceDirs, Cwd)}
     end.
 
+import_and_analyse(Files, SourceDirs, Cwd) ->
+    silence_cover(fun() ->
+        lists:foreach(fun cover:import/1, Files),
+        Modules = imported_modules(),
+        lists:foldl(
+            fun(M, Acc) ->
+                maps:merge(Acc, module_lines(M, SourceDirs, Cwd))
+            end,
+            #{},
+            Modules
+        )
+    end).
+
 %--- Internal ------------------------------------------------------------------
+
+module_lines(Mod, SourceDirs, Cwd) ->
+    case find_source(Mod, SourceDirs) of
+        {ok, AbsFile} ->
+            File = make_relative(AbsFile, Cwd),
+            #{File => analyse(Mod)};
+        error ->
+            #{}
+    end.
+
+analyse(Mod) ->
+    {ok, [_ | _] = Analysis} = cover:analyse(Mod, coverage, line),
+    #{Line => line_info(Cov) || {{_, Line}, {Cov, _}} <:- Analysis}.
+
+line_info(0) -> #{count => 0, show => true};
+line_info(C) -> #{count => C}.
+
+source_dirs(Apps) ->
+    % elp:ignore W0017
+    [filename:join(rebar_app_info:dir(App), "src") || App <:- Apps].
 
 silence_cover(Fun) ->
     Pid = cover_pid(cover:start()),
@@ -65,20 +89,21 @@ coverdata_pattern(aggregate) -> {"*.coverdata", "aggregate"};
 coverdata_pattern(eunit) -> {"eunit.coverdata", "EUnit"};
 coverdata_pattern(ct) -> {"ct.coverdata", "Common Test"}.
 
-module_uncovered(Mod) ->
-    module_uncovered(Mod, cover:analyse(Mod, coverage, line)).
+find_source(Mod, SourceDirs) ->
+    Filename = atom_to_list(Mod) ++ ".erl",
+    Paths = [
+        Path
+     || Dir <:- SourceDirs,
+        Path <:- [filename:join(Dir, Filename)],
+        filelib:is_file(Path)
+    ],
+    find_source_result(Paths).
 
-module_uncovered(Mod, {ok, Analysis}) ->
-    [
-        #{module => Mod, line => Line}
-     || {{_, Line}, {Cov, _}} <:- Analysis, Cov =:= 0
-    ];
-module_uncovered(_Mod, {error, _}) ->
-    [].
+find_source_result([File | _]) -> {ok, File};
+find_source_result([]) -> error.
 
-module_counts(Mod) -> analyse_counts(cover:analyse(Mod, coverage, line)).
-
-analyse_counts({ok, Analysis}) ->
-    #{Line => Cov || {{_, Line}, {Cov, _}} <:- Analysis};
-analyse_counts({error, _}) ->
-    #{}.
+make_relative(Path, Base) ->
+    case string:prefix(Path, Base ++ "/") of
+        nomatch -> Path;
+        Relative -> Relative
+    end.

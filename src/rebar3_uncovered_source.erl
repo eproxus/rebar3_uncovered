@@ -10,76 +10,81 @@
 }.
 
 % API
--export([resolve_files/1, read_regions/1]).
+-export([build_regions/1]).
 
 %--- API -----------------------------------------------------------------------
 
-resolve_files(
-    #{lines := UncoveredLines, apps := Apps, path_filters := PathFilters} = S
-) ->
-    SourceDirs = [
-        % elp:ignore W0017
-        filename:join(rebar_app_info:dir(App), "src")
-     || App <:- Apps
-    ],
-    {ok, Cwd} = file:get_cwd(),
-    Resolved = lists:filtermap(
-        fun(Entry) -> resolve_file(Entry, SourceDirs, Cwd) end, UncoveredLines
-    ),
-    S#{lines := filter_paths(Resolved, PathFilters)}.
-
-read_regions(
-    #{
-        lines := UncoveredLines, counts := Counts, opts := #{context := Context}
-    } = S
-) ->
-    Grouped = group_by_file(UncoveredLines),
+build_regions(#{opts := #{context := Context}} = S) ->
+    Filtered = filter_paths(S),
+    Enriched = maps:map(fun enrich_file/2, Filtered),
     Regions = lists:flatmap(
-        fun({File, {Mod, Lines}}) ->
-            ModCounts = maps:get(Mod, Counts, #{}),
-            file_regions(File, Lines, Context, ModCounts)
+        fun({File, FileLines}) ->
+            build_file_regions(File, FileLines, Context)
         end,
-        maps:to_list(Grouped)
+        maps:to_list(Enriched)
     ),
-    S#{regions => Regions}.
+    S#{files := Enriched, regions => Regions}.
 
 %--- Internal ------------------------------------------------------------------
 
-resolve_file(#{module := Mod, line := Line}, SourceDirs, Cwd) ->
-    case find_source(Mod, SourceDirs) of
-        {ok, AbsFile} ->
-            File = make_relative(AbsFile, Cwd),
-            {true, #{module => Mod, file => File, line => Line}};
-        error ->
-            false
-    end.
+filter_paths(#{files := Files, path_filters := []}) ->
+    Files;
+filter_paths(#{files := Files, path_filters := Filters}) ->
+    maps:filter(fun(File, _) -> matches_any_filter(File, Filters) end, Files).
 
-group_by_file(Lines) ->
-    lists:foldl(
-        fun(#{file := File, module := Mod, line := Line}, Acc) ->
-            maps:update_with(
-                File,
-                fun({M, Ls}) -> {M, [Line | Ls]} end,
-                {Mod, [Line]},
-                Acc
-            )
-        end,
-        #{},
-        Lines
-    ).
+matches_any_filter(File, Filters) ->
+    lists:any(fun(Filter) -> lists:prefix(Filter, File) end, Filters).
 
-file_regions(File, UncoveredLines, Context, ModCounts) ->
+enrich_file(File, FileLines) ->
     case file:read_file(File) of
         {ok, Content} ->
-            AllLines = binary:split(Content, ~"\n", [global]),
-            Sorted = lists:usort(UncoveredLines),
-            Groups = group_consecutive(Sorted, Context),
-            [
-                build_region(File, Group, AllLines, Context, ModCounts)
-             || Group <:- Groups
-            ];
+            SourceLines = binary:split(Content, ~"\n", [global]),
+            AllLines = source_lines(SourceLines, 1, #{}),
+            mapz:deep_merge(AllLines, FileLines);
         {error, _} ->
-            []
+            FileLines
+    end.
+
+source_lines([], _, Acc) ->
+    Acc;
+source_lines([Src | Rest], N, Acc) ->
+    source_lines(Rest, N + 1, Acc#{N => #{source => Src}}).
+
+build_file_regions(File, FileLines, Context) ->
+    Anchors = [N || N := Val <:- FileLines, is_anchor(Val)],
+    Sorted = lists:usort(Anchors),
+    Groups = group_consecutive(Sorted, Context),
+    FileLength = maps:size(FileLines),
+    [
+        build_region(File, Group, FileLength, Context, FileLines)
+     || Group <:- Groups
+    ].
+
+is_anchor(#{show := true}) -> true;
+is_anchor(_) -> false.
+
+build_region(File, UncoveredLines, FileLength, Context, FileLines) ->
+    First = max(1, hd(UncoveredLines) - Context),
+    Last = min(FileLength, lists:last(UncoveredLines) + Context),
+    #{
+        file => File,
+        lines => region_lines(First, Last, UncoveredLines, FileLines)
+    }.
+
+region_lines(N, Last, _, _) when N > Last ->
+    [];
+region_lines(N, Last, Uncovered, FileLines) ->
+    #{source := Src} = Info = maps:get(N, FileLines),
+    Count = maps:get(count, Info, none),
+    [
+        {N, Src, line_status(N, Uncovered), Count}
+        | region_lines(N + 1, Last, Uncovered, FileLines)
+    ].
+
+line_status(Line, UncoveredLines) ->
+    case lists:member(Line, UncoveredLines) of
+        true -> uncovered;
+        false -> covered
     end.
 
 group_consecutive([], _Context) ->
@@ -90,54 +95,8 @@ group_consecutive([First | Rest], Context) ->
 group_consecutive([], _Context, Current, Acc) ->
     lists:reverse([lists:reverse(Current) | Acc]);
 group_consecutive([Line | Rest], Context, [Prev | _] = Current, Acc) when
-    Line - Prev =< Context * 2
+    Line - Prev =< Context * 2 + 1
 ->
     group_consecutive(Rest, Context, [Line | Current], Acc);
 group_consecutive([Line | Rest], Context, Current, Acc) ->
     group_consecutive(Rest, Context, [Line], [lists:reverse(Current) | Acc]).
-
-build_region(File, UncoveredLines, AllLines, Context, ModCounts) ->
-    First = max(1, hd(UncoveredLines) - Context),
-    Last = min(length(AllLines), lists:last(UncoveredLines) + Context),
-    #{
-        file => File,
-        lines => [
-            {N, lists:nth(N, AllLines), line_status(N, UncoveredLines),
-                maps:get(N, ModCounts, none)}
-         || N <:- lists:seq(First, Last)
-        ]
-    }.
-
-line_status(Line, UncoveredLines) ->
-    case lists:member(Line, UncoveredLines) of
-        true -> uncovered;
-        false -> covered
-    end.
-
-find_source(Mod, SourceDirs) ->
-    Filename = atom_to_list(Mod) ++ ".erl",
-    Paths = [
-        Path
-     || Dir <:- SourceDirs,
-        Path <:- [filename:join(Dir, Filename)],
-        filelib:is_file(Path)
-    ],
-    find_source_result(Paths).
-
-find_source_result([File | _]) -> {ok, File};
-find_source_result([]) -> error.
-
-filter_paths(Lines, []) ->
-    Lines;
-filter_paths(Lines, Filters) ->
-    [L || #{file := File} = L <:- Lines, matches_any_filter(File, Filters)].
-
-matches_any_filter(File, Filters) ->
-    lists:any(fun(Filter) -> lists:prefix(Filter, File) end, Filters).
-
-make_relative(Path, Base) ->
-    Prefix = Base ++ "/",
-    case lists:prefix(Prefix, Path) of
-        true -> lists:nthtail(length(Prefix), Path);
-        false -> Path
-    end.

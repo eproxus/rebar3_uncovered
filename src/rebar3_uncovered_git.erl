@@ -12,14 +12,30 @@
 
 filter_uncovered(#{opts := #{git := false}} = S) ->
     S;
-filter_uncovered(#{lines := Uncovered, opts := #{git := Mode}} = S) ->
+filter_uncovered(#{files := Files, opts := #{git := Mode}} = S) ->
     Changed = changed_lines(Mode),
-    Filtered = [
-        Line
-     || #{file := File, line := LineNo} = Line <:- Uncovered,
-        lists:member(LineNo, maps:get(File, Changed, []))
-    ],
-    S#{lines := Filtered}.
+    S#{
+        files := maps:intersect_with(
+            fun(_, ChangedLines, FileLines) ->
+                hide_unchanged(ChangedLines, FileLines)
+            end,
+            Changed,
+            Files
+        )
+    }.
+
+hide_unchanged(ChangedLines, FileLines) ->
+    maps:map(
+        fun
+            (LineNo, #{show := true} = Val) when
+                not is_map_key(LineNo, ChangedLines)
+            ->
+                maps:remove(show, Val);
+            (_, Val) ->
+                Val
+        end,
+        FileLines
+    ).
 
 %--- Internal ------------------------------------------------------------------
 
@@ -39,12 +55,10 @@ parse_lines([], _File, Acc) ->
     Acc;
 parse_lines(["+++ b/" ++ Path | Rest], _File, Acc) ->
     parse_lines(Rest, Path, Acc);
-parse_lines(["@@ " ++ _ = Line | Rest], File, Acc) when
-    File =/= undefined
-->
-    LineNos = parse_hunk(Line),
-    Existing = maps:get(File, Acc, []),
-    parse_lines(Rest, File, Acc#{File => Existing ++ LineNos});
+parse_lines(["@@ " ++ _ = Line | Rest], File, Acc) when File =/= undefined ->
+    FileLines = maps:get(File, Acc, #{}),
+    NewLines = #{N => #{} || N <:- parse_hunk(Line)},
+    parse_lines(Rest, File, Acc#{File => maps:merge(FileLines, NewLines)});
 parse_lines([_ | Rest], File, Acc) ->
     parse_lines(Rest, File, Acc).
 

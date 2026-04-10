@@ -4,29 +4,12 @@
 
 %--- Tests ---------------------------------------------------------------------
 
-resolve_files_returns_relative_paths_test() ->
-    App = make_app(fixture_dir(~"source_app")),
-    Input = [#{module => mymod, line => 5}],
-    #{lines := [#{file := File}]} =
-        rebar3_uncovered_source:resolve_files(
-            #{lines => Input, counts => #{}, apps => [App], path_filters => []}
-        ),
-    ?assertEqual("test/data/source_app/src/mymod.erl", File).
-
-resolve_files_filters_unknown_modules_test() ->
-    App = make_app(fixture_dir(~"source_app")),
-    Input = [#{module => nonexistent, line => 1}],
-    #{lines := []} =
-        rebar3_uncovered_source:resolve_files(
-            #{lines => Input, counts => #{}, apps => [App], path_filters => []}
-        ).
-
-read_regions_zero_context_test() ->
-    Regions = read_regions([5], 0),
+build_regions_zero_context_test() ->
+    Regions = build_regions([5], 0),
     ?assertMatch([#{lines := [{5, _, uncovered, _}]}], Regions).
 
-read_regions_context_adds_surrounding_lines_test() ->
-    Regions = read_regions([9], 2),
+build_regions_context_adds_surrounding_lines_test() ->
+    Regions = build_regions([9], 2),
     [#{lines := Lines}] = Regions,
     ?assertEqual(
         [
@@ -39,54 +22,47 @@ read_regions_context_adds_surrounding_lines_test() ->
         [{N, S} || {N, _, S, _} <- Lines]
     ).
 
-read_regions_context_clamps_to_file_bounds_test() ->
-    Regions = read_regions([1], 3),
+build_regions_context_clamps_to_file_bounds_test() ->
+    Regions = build_regions([1], 3),
     [#{lines := Lines}] = Regions,
     ?assertEqual(1, element(1, hd(Lines))).
 
-read_regions_merges_nearby_uncovered_lines_test() ->
+build_regions_merges_nearby_uncovered_lines_test() ->
     % Lines 9 and 10 with context 2: ranges 7-11 and 8-12 overlap -> one region
-    Regions = read_regions([9, 10], 2),
+    Regions = build_regions([9, 10], 2),
     ?assertMatch([#{lines := [_ | _]}], Regions).
 
-read_regions_separates_distant_uncovered_lines_test() ->
+build_regions_separates_distant_uncovered_lines_test() ->
     % Lines 5 and 15 with context 1: ranges 4-6 and 14-16 don't overlap
-    Regions = read_regions([5, 15], 1),
+    Regions = build_regions([5, 15], 1),
     ?assertMatch([_, _], Regions).
+
+build_regions_enriches_lines_with_source_test() ->
+    #{files := Files} = build_regions_state([5], 0),
+    File = source_file(),
+    ?assertMatch(#{5 := #{source := _, count := 0}}, maps:get(File, Files)).
+
+build_regions_adds_non_analyzed_lines_test() ->
+    #{files := Files} = build_regions_state([5], 1),
+    File = source_file(),
+    FileLines = maps:get(File, Files),
+    % Line 4 is not in cover analysis but should have source from enrichment
+    ?assertMatch(#{source := _}, maps:get(4, FileLines)).
 
 %--- Helpers -------------------------------------------------------------------
 
-fixture_dir(Name) ->
-    filename:join([project_root(), "test", "data", Name]).
+source_file() ->
+    "test/data/source_app/src/mymod.erl".
 
-project_root() ->
-    BeamPath = code:which(?MODULE),
-    true = is_list(BeamPath),
-    find_project_root(filename:dirname(BeamPath)).
-
-find_project_root("/") ->
-    error(project_root_not_found);
-find_project_root(Dir) ->
-    case filelib:is_file(filename:join(Dir, "rebar.config")) of
-        true -> Dir;
-        false -> find_project_root(filename:dirname(Dir))
-    end.
-
-read_regions(LineNos, Context) ->
-    App = make_app(fixture_dir(~"source_app")),
-    Input = [#{module => mymod, line => N} || N <- LineNos],
-    S = rebar3_uncovered_source:resolve_files(
-        #{
-            lines => Input,
-            counts => #{mymod => #{N => 0 || N <- LineNos}},
-            apps => [App],
-            path_filters => []
-        }
-    ),
-    #{regions := Regions} =
-        rebar3_uncovered_source:read_regions(S#{opts => #{context => Context}}),
+build_regions(LineNos, Context) ->
+    #{regions := Regions} = build_regions_state(LineNos, Context),
     Regions.
 
-make_app(Dir) ->
-    {ok, App0} = rebar_app_info:new(test_app, "0.0.0"),
-    rebar_app_info:dir(App0, Dir).
+build_regions_state(LineNos, Context) ->
+    File = source_file(),
+    FileLines = #{N => #{count => 0, show => true} || N <- LineNos},
+    rebar3_uncovered_source:build_regions(#{
+        files => #{File => FileLines},
+        path_filters => [],
+        opts => #{context => Context, git => false}
+    }).

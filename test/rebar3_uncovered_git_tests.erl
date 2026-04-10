@@ -14,7 +14,7 @@ single_line_hunk_test() ->
         "@@ -0,0 +5 @@\n"
         "+new_line()\n",
     ?assertEqual(
-        #{"src/foo.erl" => [5]}, rebar3_uncovered_git:parse_diff(Diff)
+        #{"src/foo.erl" => #{5 => #{}}}, rebar3_uncovered_git:parse_diff(Diff)
     ).
 
 multi_line_hunk_test() ->
@@ -26,7 +26,7 @@ multi_line_hunk_test() ->
         "+line2\n"
         "+line3\n",
     ?assertEqual(
-        #{"src/foo.erl" => [10, 11, 12]},
+        #{"src/foo.erl" => #{10 => #{}, 11 => #{}, 12 => #{}}},
         rebar3_uncovered_git:parse_diff(Diff)
     ).
 
@@ -42,7 +42,7 @@ multiple_files_test() ->
         "+line1\n"
         "+line2\n",
     ?assertEqual(
-        #{"src/foo.erl" => [1], "src/bar.erl" => [5, 6]},
+        #{"src/foo.erl" => #{1 => #{}}, "src/bar.erl" => #{5 => #{}, 6 => #{}}},
         rebar3_uncovered_git:parse_diff(Diff)
     ).
 
@@ -56,6 +56,6 @@ multiple_hunks_same_file_test() ->
         "+line2\n"
         "+line3\n",
     ?assertEqual(
-        #{"src/foo.erl" => [3, 10, 11]},
+        #{"src/foo.erl" => #{3 => #{}, 10 => #{}, 11 => #{}}},
         rebar3_uncovered_git:parse_diff(Diff)
     ).

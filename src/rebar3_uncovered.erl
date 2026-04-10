@@ -36,10 +36,9 @@ do(RebarState) ->
         fun(F, Acc) -> F(Acc) end,
         #{opts => Opts, apps => Apps, path_filters => PathFilters},
         [
-            fun rebar3_uncovered_cover:uncovered_lines/1,
-            fun rebar3_uncovered_source:resolve_files/1,
+            fun rebar3_uncovered_cover:analyse_lines/1,
             fun rebar3_uncovered_git:filter_uncovered/1,
-            fun rebar3_uncovered_source:read_regions/1,
+            fun rebar3_uncovered_source:build_regions/1,
             fun rebar3_uncovered_format:format_lines/1
         ]
     ),
