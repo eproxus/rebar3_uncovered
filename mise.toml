@@ -2,9 +2,8 @@
 erlang = "28"
 rebar = "3.27.0"
 markdownlint-cli2 = "latest"
-shellcheck = "latest"
-shfmt = "latest"
 actionlint = "latest"
+git-cliff = "latest"
 yamllint = "latest"
 "ubi:whatsapp/erlang-language-platform" = { version = "latest", exe = "elp" }
 
@@ -49,7 +48,13 @@ run = "actionlint"
 
 [tasks.verify]
 description = "Run all verification checks"
-depends = ["verify:rebar", "verify:elp", "verify:markdown", "verify:yaml", "verify:actions"]
+depends = [
+  "verify:rebar",
+  "verify:elp",
+  "verify:markdown",
+  "verify:yaml",
+  "verify:actions",
+]
 
 [tasks.test]
 description = "Run all tests"
