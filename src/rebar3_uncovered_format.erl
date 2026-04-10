@@ -39,7 +39,7 @@ raw_count(false, _Count) -> "".
 format_human(Regions, Opts) ->
     Widths = compute_widths(Regions),
     Groups = group_by_file(Regions),
-    lists:join("\n", [
+    lists:join("\n\n", [
         format_file_group(File, Rs, Opts, Widths)
      || {File, Rs} <:- Groups
     ]).
@@ -51,18 +51,16 @@ format_file_group(
     #{line_width := LW} = Widths
 ) ->
     CW = count_col_width(ShowCounts, Widths),
-    Sep = fg(~"│", border, C),
     Blocks = [
         [format_line(L, Opts, Widths) || L <:- Lines]
      || #{lines := Lines} <:- Regions
     ],
     Body = lists:join(collapse_line(LW, CW, C), Blocks),
     [
+        " ",
+        bold(File, C),
+        "\n",
         border(~"╤", ~"═", LW, CW, Cols, C),
-        "\n",
-        header(File, LW, CW, Sep),
-        "\n",
-        border(~"╪", ~"═", LW, CW, Cols, C),
         "\n",
         Body,
         border(~"┴", ~"─", LW, CW, Cols, C)
@@ -106,12 +104,6 @@ border(Joint, Bar, LW, CW, Cols, C) ->
 count_border(0, _Joint, _Bar) -> {"", 0};
 count_border(CW, Joint, Bar) -> {[binary:copy(Bar, CW), Joint], CW + 1}.
 
-header(File, LW, CW, Sep) ->
-    [lists:duplicate(LW + 2, " "), Sep, count_header(CW, Sep), " ", File].
-
-count_header(0, _Sep) -> "";
-count_header(CW, Sep) -> [lists:duplicate(CW, " "), Sep].
-
 format_line(
     {N, Source, Status, Count},
     #{columns := Cols, color := C} = Opts,
@@ -142,7 +134,7 @@ count_parts(Count, Status, Sep, C, _Opts, #{count_width := CW}) ->
     }.
 
 line_number(N, LW, uncovered, C) -> bold(line_number_pad(N, LW), C);
-line_number(N, LW, _Status, _C) -> line_number_pad(N, LW).
+line_number(N, LW, _Status, C) -> fg(line_number_pad(N, LW), context, C).
 
 line_number_pad(N, LW) -> [" ", pad(integer_to_list(N), LW, right), " "].
 
@@ -164,8 +156,14 @@ format_wrapped([First | Rest], Prefix, Cont, uncovered, Gutter, Cols, true) ->
         "\n"
         | [[bg_line(Cont, C, FW), "\n"] || C <:- Rest]
     ];
-format_wrapped([First | Rest], Prefix, Cont, _Status, _Gutter, _Cols, _C) ->
-    [Prefix, " ", First, "\n" | [[Cont, " ", C, "\n"] || C <:- Rest]].
+format_wrapped([First | Rest], Prefix, Cont, _Status, _Gutter, _Cols, C) ->
+    [
+        Prefix,
+        " ",
+        fg(First, context, C),
+        "\n"
+        | [[Cont, " ", fg(L, context, C), "\n"] || L <:- Rest]
+    ].
 
 bg_line(Prefix, Chunk, FillWidth) ->
     Width = max(iolist_size(Chunk) + 1, FillWidth),
@@ -197,7 +195,8 @@ wrap_chunks(Bin, Width, Acc) ->
 color(border) -> {50, 70, 120};
 color({uncovered, count}) -> {255, 120, 100};
 color({covered, count}) -> {100, 230, 100};
-color({uncovered, bg}) -> {60, 20, 20}.
+color({uncovered, bg}) -> {60, 20, 20};
+color(context) -> {170, 170, 170}.
 
 % Styling helpers
 
@@ -206,7 +205,7 @@ pad(Text, Width, right) ->
 pad(Text, Width, left) ->
     io_lib:format("~-*s", [Width, iolist_to_binary(Text)]).
 
-bold(Text, true) -> [~"\e[1m", Text];
+bold(Text, true) -> [~"\e[1m", Text, ~"\e[22m"];
 bold(Text, false) -> Text.
 
 dim(Text, true) -> [~"\e[2m", Text, ~"\e[22m"];

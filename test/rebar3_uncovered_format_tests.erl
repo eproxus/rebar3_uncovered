@@ -62,11 +62,9 @@ raw_format_empty_regions_test() ->
 %--- Tests: human format -------------------------------------------------------
 
 human_format_test() ->
-    % LW=1, CW_raw=2: border = 3+1+4+1+21=30
     Expected = unicode:characters_to_binary([
+        " src/foo.erl\n",
         "═══╤════╤═════════════════════\n",
-        "   │    │ src/foo.erl\n",
-        "═══╪════╪═════════════════════\n",
         " 1 │ 42 │ line1\n",
         " 2 │ 0  │ line2\n",
         "───┴────┴─────────────────────"
@@ -84,15 +82,13 @@ human_format_multiple_files_test() ->
     R1 = #{file => ~"a.erl", lines => [{1, ~"x", uncovered, 0}]},
     R2 = #{file => ~"b.erl", lines => [{1, ~"y", uncovered, 0}]},
     Expected = unicode:characters_to_binary([
+        " a.erl\n",
         "═══╤═══╤════════\n",
-        "   │   │ a.erl\n",
-        "═══╪═══╪════════\n",
         " 1 │ 0 │ x\n",
         "───┴───┴────────",
-        "\n",
+        "\n\n",
+        " b.erl\n",
         "═══╤═══╤════════\n",
-        "   │   │ b.erl\n",
-        "═══╪═══╪════════\n",
         " 1 │ 0 │ y\n",
         "───┴───┴────────"
     ]),
@@ -106,9 +102,8 @@ human_format_same_file_grouped_test() ->
     R1 = #{file => ~"a.erl", lines => [{1, ~"x", uncovered, 0}]},
     R2 = #{file => ~"a.erl", lines => [{5, ~"y", uncovered, 0}]},
     Expected = unicode:characters_to_binary([
+        " a.erl\n",
         "═══╤═══╤════════\n",
-        "   │   │ a.erl\n",
-        "═══╪═══╪════════\n",
         " 1 │ 0 │ x\n",
         " ⋮ ┊   ┊\n",
         " 5 │ 0 │ y\n",
@@ -131,9 +126,8 @@ human_format_non_executable_line_test() ->
         }
     ],
     Expected = unicode:characters_to_binary([
+        " f.erl\n",
         "═══╤═══╤════════════\n",
-        "   │   │ f.erl\n",
-        "═══╪═══╪════════════\n",
         " 1 │ 0 │ x\n",
         " 2 │   │ % comment\n",
         "───┴───┴────────────"
@@ -157,9 +151,8 @@ human_format_dynamic_widths_test() ->
         }
     ],
     Expected = unicode:characters_to_binary([
+        " f.erl\n",
         "═════╤══════╤═════════════════\n",
-        "     │      │ f.erl\n",
-        "═════╪══════╪═════════════════\n",
         "   1 │ 0    │ first\n",
         " 100 │ 1234 │ hundredth\n",
         "─────┴──────┴─────────────────"
@@ -174,9 +167,8 @@ human_format_dynamic_widths_test() ->
 human_format_no_counts_test() ->
     % LW=1, no counts: border = 3+1+16=20
     Expected = unicode:characters_to_binary([
+        " src/foo.erl\n",
         "═══╤════════════════\n",
-        "   │ src/foo.erl\n",
-        "═══╪════════════════\n",
         " 1 │ line1\n",
         " 2 │ line2\n",
         "───┴────────────────"
@@ -197,9 +189,8 @@ human_format_wrap_test() ->
         }
     ],
     Expected = unicode:characters_to_binary([
+        " f.erl\n",
         "═══╤═══╤════════════\n",
-        "   │   │ f.erl\n",
-        "═══╪═══╪════════════\n",
         " 1 │ 5 │ longline th\n",
         "   │   │ at wraps!\n",
         "───┴───┴────────────"
@@ -232,10 +223,10 @@ human_color_line_test() ->
         Result = unicode:characters_to_binary(
             format(Regions, human, true, true, 20)
         ),
+    % Verify bold filename
+    ?assert(binary:match(Result, ~b"\e[1mf.erl\e[22m") =/= nomatch),
     % Verify uncovered source bg wraps entire line
     ?assert(binary:match(Result, ~b"\e[48;2;60;20;20m") =/= nomatch),
-    % Verify bold uncovered line number
-    ?assert(binary:match(Result, ~b"\e[1m") =/= nomatch),
     % Verify uncovered count fg color
     ?assert(binary:match(Result, ~b"\e[38;2;255;120;100m") =/= nomatch).
 
@@ -247,6 +238,8 @@ human_color_covered_line_test() ->
         ),
     % Verify covered count fg color
     ?assert(binary:match(Result, ~b"\e[38;2;100;230;100m") =/= nomatch),
+    % Verify gray source text on covered lines
+    ?assert(binary:match(Result, ~b"\e[38;2;170;170;170m") =/= nomatch),
     % Verify no bg on covered lines
     ?assert(binary:match(Result, ~b"\e[48;2;60;20;20m") =:= nomatch).
 
