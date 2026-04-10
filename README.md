@@ -28,6 +28,21 @@ src/gaffer_queue.erl:145 0             persistent_term:erase({gaffer_queue, Name
 src/gaffer_queue.erl:151 0         {error, not_found} -> ok
 ```
 
+## Installation
+
+Add the plugin to your project's `rebar.config`:
+
+```erlang
+{project_plugins, [rebar3_uncovered]}.
+```
+
+To install it globally for all projects, add it to
+`~/.config/rebar3/rebar.config`:
+
+```erlang
+{plugins, [rebar3_uncovered]}.
+```
+
 ## Usage
 
 ```console
