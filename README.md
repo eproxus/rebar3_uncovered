@@ -14,10 +14,11 @@ A Rebar 3 plugin that reports on uncovered lines from tests. Run it after
 
 ![Human-readable output](docs/screenshot.png)
 
-A machine-readable format is also available for script / CI / LLM consumption:
+A machine-readable format is also available for script / CI / LLM consumption.
+Prefix with `QUIET=1` to suppress Rebar's own log messages:
 
 ```console
-$ rebar3 uncovered --git --format=raw --context=0
+$ QUIET=1 rebar3 uncovered --git --format=raw --context=0
 src/gaffer_queue.erl:141 0             _ = gaffer_hooks:with_hooks(
 src/gaffer_queue.erl:142 0                 Hooks, [gaffer, queue, delete], Name, fun(N) -> N end
 src/gaffer_queue.erl:144 0             ok = gaffer_sup:stop_queue(gaffer_queue_sup:pid(Name)),
@@ -69,7 +70,8 @@ Positional arguments after `--` are used as file or directory filters.
     - `human` (default) — color-coded table with line numbers, coverage counts,
       and source context
     - `raw` — one line per uncovered line in a grep-like format suitable for
-      scripts, CI, or LLM consumption
+      scripts, CI, or LLM consumption. Set the environment variable `QUIET=1`
+      to suppress Rebar's own log messages for clean output
 
 - **`--context`**, **`-C`**
 
