@@ -29,6 +29,7 @@ rebar3 as test xref
 
 [tasks."verify:elp"]
 description = "Run ELP checks"
+depends = ["verify:rebar"]
 run = """
 elp lint
 elp eqwalize-all
