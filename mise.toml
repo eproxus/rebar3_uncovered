@@ -4,6 +4,7 @@ rebar = "3.27.0"
 markdownlint-cli2 = "latest"
 shellcheck = "latest"
 shfmt = "latest"
+actionlint = "latest"
 yamllint = "latest"
 "ubi:whatsapp/erlang-language-platform" = { version = "latest", exe = "elp" }
 
@@ -41,9 +42,13 @@ run = 'markdownlint-cli2 "**/*.md" "!_build" "!tmp"'
 description = "Lint YAML files"
 run = "yamllint --strict -c .yamllint.yml ."
 
+[tasks."verify:actions"]
+description = "Lint GitHub Actions workflows"
+run = "actionlint"
+
 [tasks.verify]
 description = "Run all verification checks"
-depends = ["verify:rebar", "verify:elp", "verify:markdown", "verify:yaml"]
+depends = ["verify:rebar", "verify:elp", "verify:markdown", "verify:yaml", "verify:actions"]
 
 [tasks.test]
 description = "Run all tests"
