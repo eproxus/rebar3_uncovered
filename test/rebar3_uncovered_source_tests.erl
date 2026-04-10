@@ -47,7 +47,7 @@ build_regions_context_all_test() ->
     % All lines in a single region
     ?assertMatch([#{lines := _}], Regions),
     [#{lines := Lines}] = Regions,
-    ?assertEqual(18, length(Lines)).
+    ?assertEqual(17, length(Lines)).
 
 build_regions_adds_non_analyzed_lines_test() ->
     #{files := Files} = build_regions_state([5], 1),

@@ -38,17 +38,18 @@ matches_any_filter(File, Filters) ->
 enrich_file(File, FileLines) ->
     case file:read_file(File) of
         {ok, Content} ->
-            SourceLines = binary:split(Content, ~"\n", [global]),
-            AllLines = source_lines(SourceLines, 1, #{}),
-            mapz:deep_merge(AllLines, FileLines);
+            Lines = binary:split(Content, ~"\n", [global]),
+            mapz:deep_merge(add_source(Lines, 1, #{}), FileLines);
         {error, _} ->
             FileLines
     end.
 
-source_lines([], _, Acc) ->
+add_source([<<>>], _, Acc) ->
     Acc;
-source_lines([Src | Rest], N, Acc) ->
-    source_lines(Rest, N + 1, Acc#{N => #{source => Src}}).
+add_source([], _, Acc) ->
+    Acc;
+add_source([Src | Rest], N, Acc) ->
+    add_source(Rest, N + 1, Acc#{N => #{source => Src}}).
 
 build_file_regions(File, FileLines, all) ->
     build_file_regions(File, FileLines, maps:size(FileLines));
