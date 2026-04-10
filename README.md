@@ -1,12 +1,14 @@
 <!-- markdownlint-disable-line MD013 -->
-# rebar3_uncovered [![CI Status][ci-img]][ci] [![Minimum Erlang Version][erlang-img]][erlang] [![License][license-img]][license]
+# rebar3_uncovered [![CI Status][ci-img]][ci] [![Hex.pm Version][hex-img]][hex] [![Minimum Erlang Version][erlang-img]][erlang] [![License][license-img]][license]
 
 [ci]:          https://github.com/eproxus/rebar3_uncovered/actions/workflows/ci.yml?query=branch%3Amain
 [ci-img]:      https://img.shields.io/github/actions/workflow/status/eproxus/rebar3_uncovered/ci.yml?label=ci
+[hex]:         https://hex.pm/packages/rebar3_uncovered
+[hex-img]:     https://img.shields.io/hexpm/v/rebar3_uncovered
 [erlang]:      https://github.com/eproxus/rebar3_uncovered/blob/main/mise.toml
 [erlang-img]:  https://img.shields.io/badge/erlang-28+-blue.svg
 [license]:     LICENSE.md
-[license-img]: https://img.shields.io/badge/license-MIT-blue.svg
+[license-img]: https://img.shields.io/hexpm/l/rebar3_uncovered
 
 A Rebar 3 plugin that reports on uncovered lines from tests. Run it after
 `rebar3 eunit` or `rebar3 ct` to see which lines your tests missed. Use `--git`
