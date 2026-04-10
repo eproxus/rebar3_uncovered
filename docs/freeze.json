@@ -1,0 +1,9 @@
+{
+    "font.family": "Iosevka Custom",
+    "window": true,
+    "shadow.blur": 20,
+    "shadow.x": 0,
+    "shadow.y": 10,
+    "margin": 40,
+    "border.radius": 8
+}

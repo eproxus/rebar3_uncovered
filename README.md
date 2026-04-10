@@ -6,7 +6,90 @@
 [license]:     LICENSE.md
 [license-img]: https://img.shields.io/badge/license-MIT-blue.svg
 
-A Rebar 3 plugin that reports on uncovered lines from tests.
+A Rebar 3 plugin that reports on uncovered lines from tests. Run it after
+`rebar3 eunit` or `rebar3 ct` to see which lines your tests missed. Use
+`--git` to narrow the report to lines changed in the current branch.
+
+![Human-readable output](docs/screenshot.png)
+
+A machine-readable format is also available for script / CI / LLM consumption:
+
+```console
+$ rebar3 uncovered --git --format=raw --context=0
+src/gaffer_queue.erl:141 0             _ = gaffer_hooks:with_hooks(
+src/gaffer_queue.erl:142 0                 Hooks, [gaffer, queue, delete], Name, fun(N) -> N end
+src/gaffer_queue.erl:144 0             ok = gaffer_sup:stop_queue(gaffer_queue_sup:pid(Name)),
+src/gaffer_queue.erl:145 0             persistent_term:erase({gaffer_queue, Name})
+src/gaffer_queue.erl:151 0         {error, not_found} -> ok
+```
+
+## Usage
+
+```console
+rebar3 uncovered [options] [-- path ...]
+rebar3 help uncovered
+```
+
+Positional arguments after `--` are used as file or directory filters.
+
+### Options
+
+- **`--help`**, **`-h`**
+
+  Show usage information and available options.
+
+- **`--git`**, **`-g`**
+
+  Filter uncovered lines to only those changed in the current git diff. Without
+  this flag, all uncovered lines are reported.
+
+- **`--git-scope`**
+
+  Which part of the git diff to consider. Only has effect when `--git` is
+  enabled.
+
+    - `all` (default) — both staged and unstaged changes
+    - `staged` — only changes added to the index
+    - `unstaged` — only working tree changes
+
+- **`--coverage`**
+
+  Which coverage data to use.
+
+    - `aggregate` (default) — combine all test suites
+    - `eunit` — only EUnit coverage data
+    - `ct` — only Common Test coverage data
+
+- **`--format`**, **`-f`**
+
+  Output format.
+
+    - `human` (default) — color-coded table with line numbers, coverage counts,
+      and source context
+    - `raw` — one line per uncovered line in a grep-like format suitable for
+      scripts, CI, or LLM consumption
+
+- **`--context`**, **`-C`**
+
+  Number of covered lines to show around each uncovered line for context. Only
+  applies to `human` format.
+
+    - `<integer>` (default: `2`) — number of context lines to show
+    - `0` — show only uncovered lines
+    - `all` — show the entire function
+
+- **`--counts`**
+
+  Show how many times each line was executed. Use `--counts false` to hide the
+  counts column. Enabled by default.
+
+- **`--color`**
+
+  Color output. Respects the `NO_COLOR` environment variable.
+
+    - `auto` (default) — enable color when output is a terminal
+    - `always` — force color on
+    - `never` — disable color
 
 ## Changelog
 
