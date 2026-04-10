@@ -51,7 +51,7 @@ Positional arguments after `--` are used as file or directory filters.
   Which part of the git diff to consider. Only has effect when `--git` is
   enabled.
 
-    - `all` (default) — both staged and unstaged changes
+    - `all` *(default)* — both staged and unstaged changes
     - `staged` — only changes added to the index
     - `unstaged` — only working tree changes
 
@@ -59,7 +59,7 @@ Positional arguments after `--` are used as file or directory filters.
 
   Which coverage data to use.
 
-    - `aggregate` (default) — combine all test suites
+    - `aggregate` *(default)* — combine all test suites
     - `eunit` — only EUnit coverage data
     - `ct` — only Common Test coverage data
 
@@ -67,7 +67,7 @@ Positional arguments after `--` are used as file or directory filters.
 
   Output format.
 
-    - `human` (default) — color-coded table with line numbers, coverage counts,
+    - `human` *(default)* — color-coded table with line numbers, coverage counts,
       and source context
     - `raw` — one line per uncovered line in a grep-like format suitable for
       scripts, CI, or LLM consumption. Set the environment variable `QUIET=1` to
@@ -78,20 +78,20 @@ Positional arguments after `--` are used as file or directory filters.
   Number of covered lines to show around each uncovered line for context. Only
   applies to `human` format.
 
-    - `<integer>` (default: `2`) — number of context lines to show
+    - `<integer>` *(default: `2`)* — number of context lines to show
     - `0` — show only uncovered lines
     - `all` — show the entire function
 
 - **`--counts`**
 
   Show how many times each line was executed. Use `--counts false` to hide the
-  counts column. Enabled by default.
+  counts column. *Enabled by default.*
 
 - **`--color`**
 
   Color output. Respects the `NO_COLOR` environment variable.
 
-    - `auto` (default) — enable color when output is a terminal
+    - `auto` *(default)* — enable color when output is a terminal
     - `always` — force color on
     - `never` — disable color
 
