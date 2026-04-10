@@ -1,6 +1,8 @@
 <!-- markdownlint-disable-line MD013 -->
-# rebar3_uncovered [![Minimum Erlang Version][erlang-img]][erlang] [![License][license-img]][license]
+# rebar3_uncovered [![CI Status][ci-img]][ci] [![Minimum Erlang Version][erlang-img]][erlang] [![License][license-img]][license]
 
+[ci]:          https://github.com/eproxus/rebar3_uncovered/actions/workflows/ci.yml?query=branch%3Amain
+[ci-img]:      https://img.shields.io/github/actions/workflow/status/eproxus/rebar3_uncovered/ci.yml?label=ci
 [erlang]:      https://github.com/eproxus/rebar3_uncovered/blob/main/mise.toml
 [erlang-img]:  https://img.shields.io/badge/erlang-28+-blue.svg
 [license]:     LICENSE.md
