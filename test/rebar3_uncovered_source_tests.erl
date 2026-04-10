@@ -42,6 +42,13 @@ build_regions_enriches_lines_with_source_test() ->
     File = source_file(),
     ?assertMatch(#{5 := #{source := _, count := 0}}, maps:get(File, Files)).
 
+build_regions_context_all_test() ->
+    Regions = build_regions([5, 15], all),
+    % All lines in a single region
+    ?assertMatch([#{lines := _}], Regions),
+    [#{lines := Lines}] = Regions,
+    ?assertEqual(18, length(Lines)).
+
 build_regions_adds_non_analyzed_lines_test() ->
     #{files := Files} = build_regions_state([5], 1),
     File = source_file(),

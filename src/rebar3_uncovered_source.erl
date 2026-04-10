@@ -50,6 +50,8 @@ source_lines([], _, Acc) ->
 source_lines([Src | Rest], N, Acc) ->
     source_lines(Rest, N + 1, Acc#{N => #{source => Src}}).
 
+build_file_regions(File, FileLines, all) ->
+    build_file_regions(File, FileLines, maps:size(FileLines));
 build_file_regions(File, FileLines, Context) ->
     Anchors = [N || N := Val <:- FileLines, is_anchor(Val)],
     Sorted = lists:usort(Anchors),

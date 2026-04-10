@@ -60,8 +60,8 @@ opts() ->
         {color, undefined, "color", {string, "auto"},
             "Color output: auto, always, never"},
         {format, $f, "format", {string, "human"}, "Output format: human, raw"},
-        {context, $C, "context", {integer, 2},
-            "Number of surrounding context lines"},
+        {context, $C, "context", {string, "2"},
+            "Context lines: integer or 'all'"},
         {counts, undefined, "counts", {boolean, true}, "Show coverage counts"}
     ].
 
@@ -100,6 +100,8 @@ opt(format, "raw") -> raw;
 opt(color, "always") -> true;
 opt(color, "never") -> false;
 opt(color, "auto") -> resolve_auto_color();
+opt(context, "all") -> all;
+opt(context, S) when is_list(S) -> opt(context, list_to_integer(S));
 opt(context, N) when is_integer(N), N >= 0 -> N;
 opt(counts, B) when is_boolean(B) -> B;
 opt(git, B) when is_boolean(B) -> B;
