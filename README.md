@@ -20,12 +20,12 @@ A machine-readable format is also available for script / CI / LLM consumption.
 Prefix with `QUIET=1` to suppress Rebar's own log messages:
 
 ```console
-$ QUIET=1 rebar3 uncovered --git --format=raw --context=0
-src/gaffer_queue.erl:141 0             _ = gaffer_hooks:with_hooks(
-src/gaffer_queue.erl:142 0                 Hooks, [gaffer, queue, delete], Name, fun(N) -> N end
-src/gaffer_queue.erl:144 0             ok = gaffer_sup:stop_queue(gaffer_queue_sup:pid(Name)),
-src/gaffer_queue.erl:145 0             persistent_term:erase({gaffer_queue, Name})
-src/gaffer_queue.erl:151 0         {error, not_found} -> ok
+$ QUIET=1 rebar3 uncovered --git --format=raw --context=0 --counts=false
+src/gaffer_queue.erl:141             _ = gaffer_hooks:with_hooks(
+src/gaffer_queue.erl:142                 Hooks, [gaffer, queue, delete], Name, fun(N) -> N end
+src/gaffer_queue.erl:144             ok = gaffer_sup:stop_queue(gaffer_queue_sup:pid(Name)),
+src/gaffer_queue.erl:145             persistent_term:erase({gaffer_queue, Name})
+src/gaffer_queue.erl:151         {error, not_found} -> ok
 ```
 
 ## Installation
