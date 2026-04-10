@@ -32,7 +32,7 @@ description = "Run ELP checks"
 depends = ["verify:rebar"]
 run = """
 elp lint
-elp eqwalize-all
+elp eqwalize-all --rebar --as test
 """
 
 [tasks."verify:markdown"]
