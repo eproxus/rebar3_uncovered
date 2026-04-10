@@ -28,30 +28,40 @@ init(State) ->
 do(RebarState) ->
     % elp:ignore W0017
     {RawOpts, PathFilters} = rebar_state:command_parsed_args(RebarState),
-    Opts = parse_opts(RawOpts),
-
-    % elp:ignore W0017
-    Apps = rebar_state:project_apps(RebarState),
-    State = lists:foldl(
-        fun(F, Acc) -> F(Acc) end,
-        #{opts => Opts, apps => Apps, path_filters => PathFilters},
-        [
-            fun rebar3_uncovered_cover:analyse_lines/1,
-            fun rebar3_uncovered_git:filter_uncovered/1,
-            fun rebar3_uncovered_source:build_regions/1,
-            fun rebar3_uncovered_format:format_lines/1
-        ]
-    ),
-    % elp:ignore W0017
-    print_output(State),
+    case proplists:get_value(help, RawOpts, false) of
+        true ->
+            print_help();
+        false ->
+            Opts = parse_opts(RawOpts),
+            % elp:ignore W0017
+            Apps = rebar_state:project_apps(RebarState),
+            State = lists:foldl(
+                fun(F, Acc) -> F(Acc) end,
+                #{opts => Opts, apps => Apps, path_filters => PathFilters},
+                [
+                    fun rebar3_uncovered_cover:analyse_lines/1,
+                    fun rebar3_uncovered_git:filter_uncovered/1,
+                    fun rebar3_uncovered_source:build_regions/1,
+                    fun rebar3_uncovered_format:format_lines/1
+                ]
+            ),
+            % elp:ignore W0017
+            print_output(State)
+    end,
     {ok, RebarState}.
 
 format_error(Reason) -> io_lib:format("~p", [Reason]).
 
 %--- Internal ------------------------------------------------------------------
 
+print_help() ->
+    getopt:usage(
+        opts(), "rebar3 uncovered", "[-- path ...]", desc(), [], standard_io
+    ).
+
 opts() ->
     [
+        {help, $h, "help", boolean, "Show this help"},
         {git, $g, "git", boolean, "Filter by git diff"},
         {git_scope, undefined, "git-scope", {string, "all"},
             "Git diff scope: staged, all, unstaged"},
@@ -69,13 +79,10 @@ desc() ->
     ~"""
     Report uncovered lines from tests.
 
-    Displays source code of uncovered lines with syntax
-    highlighting and surrounding context. Supports
-    filtering by git diff, coverage source, and file path
-    filters.
+    Displays uncovered source lines with surrounding context and coverage counts.
+    Supports filtering by git diff, coverage source, and file path.
 
-    Positional arguments are used as file or directory
-    filters.
+    Positional arguments after -- are used as file or directory filters.
     """.
 
 parse_opts(RawOpts) ->
