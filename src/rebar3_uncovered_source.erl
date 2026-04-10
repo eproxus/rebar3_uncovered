@@ -34,7 +34,7 @@ resolve_files(UncoveredLines, Apps) ->
         UncoveredLines
     ).
 
-read_regions(UncoveredLines, Context, Counts) ->
+read_regions(UncoveredLines, #{context := Context}, Counts) ->
     Grouped = group_by_file(UncoveredLines),
     lists:flatmap(
         fun({File, {Mod, Lines}}) ->

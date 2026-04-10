@@ -14,7 +14,7 @@
 
 %--- API -----------------------------------------------------------------------
 
-uncovered_lines(Source, Apps) ->
+uncovered_lines(#{coverage := Source}, Apps) ->
     {Pattern, Name} = coverdata_pattern(Source),
     case coverdata_files(Pattern, Apps) of
         [] ->
@@ -26,7 +26,9 @@ uncovered_lines(Source, Apps) ->
                 lists:foreach(fun cover:import/1, Files),
                 Modules = imported_modules(),
                 Uncovered = lists:flatmap(fun module_uncovered/1, Modules),
-                Counts = maps:from_list([{M, module_counts(M)} || M <:- Modules]),
+                Counts = lists:foldl(
+                    fun(M, Acc) -> Acc#{M => module_counts(M)} end, #{}, Modules
+                ),
                 {Uncovered, Counts}
             end)
     end.

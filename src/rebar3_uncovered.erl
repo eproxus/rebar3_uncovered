@@ -27,36 +27,18 @@ init(State) ->
 
 do(State) ->
     % elp:ignore W0017
-    {Opts, PathFilters} = rebar_state:command_parsed_args(State),
-    Coverage = opt(coverage, Opts),
-    Format = opt(format, Opts),
-    Color = opt(color, Opts),
-    Context = opt(context, Opts),
-    ShowCounts = opt(counts, Opts),
-    GitMode =
-        case proplists:get_value(git, Opts) of
-            true -> opt(git_scope, Opts);
-            _ -> false
-        end,
+    {RawOpts, PathFilters} = rebar_state:command_parsed_args(State),
+    Opts = parse_opts(RawOpts),
 
     % elp:ignore W0017
     Apps = rebar_state:project_apps(State),
-    {Uncovered0, Counts} = rebar3_uncovered_cover:uncovered_lines(
-        Coverage, Apps
-    ),
+    {Uncovered0, Counts} = rebar3_uncovered_cover:uncovered_lines(Opts, Apps),
     Uncovered1 = rebar3_uncovered_source:resolve_files(Uncovered0, Apps),
-    Uncovered2 = maybe_filter_git(Uncovered1, GitMode),
+    Uncovered2 = rebar3_uncovered_git:filter_uncovered(Uncovered1, Opts),
     Uncovered3 = filter_paths(Uncovered2, PathFilters),
 
-    Regions = rebar3_uncovered_source:read_regions(Uncovered3, Context, Counts),
-    FormatOpts = #{
-        format => Format,
-        color => Color,
-        context => Context,
-        counts => ShowCounts,
-        columns => resolve_columns()
-    },
-    case rebar3_uncovered_format:format_lines(Regions, FormatOpts) of
+    Regions = rebar3_uncovered_source:read_regions(Uncovered3, Opts, Counts),
+    case rebar3_uncovered_format:format_lines(Regions, Opts) of
         [] -> ok;
         % elp:ignore W0017
         Output -> rebar_api:console("~ts", [Output])
@@ -95,47 +77,48 @@ desc() ->
     filters.
     """.
 
-opt(Name, Opts) -> opt_value(Name, proplists:get_value(Name, Opts)).
+parse_opts(RawOpts) ->
+    Defaults = #{
+        coverage => aggregate,
+        format => human,
+        color => resolve_auto_color(),
+        context => 2,
+        counts => true,
+        git => false,
+        git_scope => all,
+        columns => resolve_columns()
+    },
+    Validated = maps:map(fun opt/2, maps:from_list(RawOpts)),
+    resolve_git(maps:merge(Defaults, Validated)).
 
-opt_value(coverage, undefined) -> aggregate;
-opt_value(coverage, "aggregate") -> aggregate;
-opt_value(coverage, "eunit") -> eunit;
-opt_value(coverage, "ct") -> ct;
-opt_value(format, undefined) -> human;
-opt_value(format, "human") -> human;
-opt_value(format, "raw") -> raw;
-opt_value(color, undefined) -> resolve_auto_color();
-opt_value(color, "always") -> true;
-opt_value(color, "never") -> false;
-opt_value(color, "auto") -> resolve_auto_color();
-opt_value(context, undefined) -> 2;
-opt_value(context, N) when is_integer(N), N >= 0 -> N;
-opt_value(counts, undefined) -> true;
-opt_value(counts, B) when is_boolean(B) -> B;
-opt_value(git_scope, undefined) -> all;
-opt_value(git_scope, "staged") -> staged;
-opt_value(git_scope, "all") -> all;
-opt_value(git_scope, "unstaged") -> unstaged;
-opt_value(Name, Value) -> error({invalid_option, Name, Value}).
+opt(coverage, "aggregate") -> aggregate;
+opt(coverage, "eunit") -> eunit;
+opt(coverage, "ct") -> ct;
+opt(format, "human") -> human;
+opt(format, "raw") -> raw;
+opt(color, "always") -> true;
+opt(color, "never") -> false;
+opt(color, "auto") -> resolve_auto_color();
+opt(context, N) when is_integer(N), N >= 0 -> N;
+opt(counts, B) when is_boolean(B) -> B;
+opt(git, B) when is_boolean(B) -> B;
+opt(git_scope, "staged") -> staged;
+opt(git_scope, "all") -> all;
+opt(git_scope, "unstaged") -> unstaged;
+opt(Name, Value) -> error({invalid_option, Name, Value}).
+
+resolve_git(#{git := true, git_scope := Scope} = Opts) -> Opts#{git := Scope};
+resolve_git(Opts) -> Opts.
 
 resolve_auto_color() ->
-    os:getenv("NO_COLOR") =:= false andalso io:columns() =/= {error, enotsup}.
+    not is_list(os:getenv("NO_COLOR")) andalso
+        io:columns() =/= {error, enotsup}.
 
 resolve_columns() ->
     case io:columns() of
         {ok, Cols} -> Cols;
         {error, enotsup} -> 80
     end.
-
-maybe_filter_git(Uncovered, false) ->
-    Uncovered;
-maybe_filter_git(Uncovered, Mode) ->
-    Changed = rebar3_uncovered_git:changed_lines(Mode),
-    [
-        Line
-     || #{file := File, line := LineNo} = Line <:- Uncovered,
-        lists:member(LineNo, maps:get(File, Changed, []))
-    ].
 
 filter_paths(Uncovered, []) ->
     Uncovered;

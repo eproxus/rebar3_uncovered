@@ -1,19 +1,30 @@
 -module(rebar3_uncovered_git).
 
 % API
--export([changed_lines/1]).
+-export([filter_uncovered/2]).
 
 -ifdef(TEST).
 -export([parse_diff/1]).
+-ignore_xref(parse_diff/1).
 -endif.
 
 %--- API -----------------------------------------------------------------------
 
+filter_uncovered(Uncovered, #{git := false}) ->
+    Uncovered;
+filter_uncovered(Uncovered, #{git := Mode}) ->
+    Changed = changed_lines(Mode),
+    [
+        Line
+     || #{file := File, line := LineNo} = Line <:- Uncovered,
+        lists:member(LineNo, maps:get(File, Changed, []))
+    ].
+
+%--- Internal ------------------------------------------------------------------
+
 changed_lines(Mode) ->
     Output = git_diff(Mode),
     parse_diff(Output).
-
-%--- Internal ------------------------------------------------------------------
 
 git_diff(all) -> os:cmd("git diff -U0 --no-color --no-ext-diff HEAD");
 git_diff(staged) -> os:cmd("git diff -U0 --no-color --no-ext-diff --cached");

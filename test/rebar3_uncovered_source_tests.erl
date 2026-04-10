@@ -71,7 +71,9 @@ read_regions(LineNos, Context) ->
     Input = [#{module => mymod, line => N} || N <- LineNos],
     Resolved = rebar3_uncovered_source:resolve_files(Input, [App]),
     Counts = #{mymod => #{N => 0 || N <- LineNos}},
-    rebar3_uncovered_source:read_regions(Resolved, Context, Counts).
+    rebar3_uncovered_source:read_regions(
+        Resolved, #{context => Context}, Counts
+    ).
 
 make_app(Dir) ->
     {ok, App0} = rebar_app_info:new(test_app, "0.0.0"),

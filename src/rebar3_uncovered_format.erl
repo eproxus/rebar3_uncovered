@@ -1,15 +1,5 @@
 -module(rebar3_uncovered_format).
 
--export_type([format_opts/0]).
-
--type format_opts() :: #{
-    format := human | raw,
-    color := boolean(),
-    context := non_neg_integer(),
-    counts := boolean(),
-    columns := pos_integer()
-}.
-
 % API
 -export([format_lines/2]).
 
@@ -35,16 +25,16 @@ format_raw_line(File, {N, Source, Status, Count}, ShowCounts) ->
         raw_sep(Status),
         integer_to_list(N),
         " ",
-        raw_count(ShowCounts, Status, Count),
+        raw_count(ShowCounts, Count),
         Source
     ].
 
 raw_sep(uncovered) -> ":";
 raw_sep(covered) -> ":".
 
-raw_count(true, _Status, none) -> "- ";
-raw_count(true, _Status, Count) -> [integer_to_list(Count), " "];
-raw_count(false, _Status, _Count) -> "".
+raw_count(true, none) -> "- ";
+raw_count(true, Count) -> [integer_to_list(Count), " "];
+raw_count(false, _Count) -> "".
 
 format_human(Regions, Opts) ->
     Widths = compute_widths(Regions),

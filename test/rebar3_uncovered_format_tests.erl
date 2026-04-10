@@ -228,9 +228,10 @@ raw_format_no_counts_test() ->
 
 human_color_line_test() ->
     Regions = [#{file => ~"f.erl", lines => [{1, ~"x", uncovered, 0}]}],
-    Result = unicode:characters_to_binary(
-        format(Regions, human, true, true, 20)
-    ),
+    <<_/binary>> =
+        Result = unicode:characters_to_binary(
+            format(Regions, human, true, true, 20)
+        ),
     % Verify uncovered source bg wraps entire line
     ?assert(binary:match(Result, ~b"\e[48;2;60;20;20m") =/= nomatch),
     % Verify bold uncovered line number
@@ -240,9 +241,10 @@ human_color_line_test() ->
 
 human_color_covered_line_test() ->
     Regions = [#{file => ~"f.erl", lines => [{1, ~"x", covered, 5}]}],
-    Result = unicode:characters_to_binary(
-        format(Regions, human, true, true, 20)
-    ),
+    <<_/binary>> =
+        Result = unicode:characters_to_binary(
+            format(Regions, human, true, true, 20)
+        ),
     % Verify covered count fg color
     ?assert(binary:match(Result, ~b"\e[38;2;100;230;100m") =/= nomatch),
     % Verify no bg on covered lines
