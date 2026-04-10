@@ -9,8 +9,8 @@
 [license-img]: https://img.shields.io/badge/license-MIT-blue.svg
 
 A Rebar 3 plugin that reports on uncovered lines from tests. Run it after
-`rebar3 eunit` or `rebar3 ct` to see which lines your tests missed. Use
-`--git` to narrow the report to lines changed in the current branch.
+`rebar3 eunit` or `rebar3 ct` to see which lines your tests missed. Use `--git`
+to narrow the report to lines changed since the last commit.
 
 ![Human-readable output](docs/screenshot.png)
 
@@ -70,8 +70,8 @@ Positional arguments after `--` are used as file or directory filters.
     - `human` (default) — color-coded table with line numbers, coverage counts,
       and source context
     - `raw` — one line per uncovered line in a grep-like format suitable for
-      scripts, CI, or LLM consumption. Set the environment variable `QUIET=1`
-      to suppress Rebar's own log messages for clean output
+      scripts, CI, or LLM consumption. Set the environment variable `QUIET=1` to
+      suppress Rebar's own log messages for clean output
 
 - **`--context`**, **`-C`**
 
@@ -101,18 +101,20 @@ See the [Releases](https://github.com/eproxus/rebar3_uncovered/releases) page.
 
 ## Code of Conduct
 
-Find this project's code of conduct in [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md).
+Find this project's code of conduct in [Contributor Covenant Code of
+Conduct](CODE_OF_CONDUCT.md).
 
 ## Contributing
 
 First of all, thank you for contributing with your time and energy.
 
-If you want to request a new feature make sure to [open an issue](https://github.com/eproxus/rebar3_uncovered/issues/new?template=feature_request.md)
+If you want to request a new feature make sure to [open an
+issue](https://github.com/eproxus/rebar3_uncovered/issues/new?template=feature_request.md)
 so we can discuss it first.
 
-Bug reports and questions are also welcome. If you found a bug, please check that you're using the
-latest version first. If you have a question, search the issue database as it might have already
-been answered.
+Bug reports and questions are also welcome. If you found a bug, please check
+that you're using the latest version first. If you have a question, search the
+issue database as it might have already been answered.
 
 Contributions will be subject to the MIT License. You will retain the copyright.
 
