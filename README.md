@@ -43,8 +43,8 @@ Positional arguments after `--` are used as file or directory filters.
 
 - **`--git`**, **`-g`**
 
-  Filter uncovered lines to only those changed in the current git diff. Without
-  this flag, all uncovered lines are reported.
+  Filter uncovered lines to only those changed in the current git diff.
+  *Disabled by default.*
 
 - **`--git-scope`**
 
