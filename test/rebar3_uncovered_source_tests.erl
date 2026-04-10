@@ -7,13 +7,19 @@
 resolve_files_returns_relative_paths_test() ->
     App = make_app(fixture_dir(~"source_app")),
     Input = [#{module => mymod, line => 5}],
-    [#{file := File}] = rebar3_uncovered_source:resolve_files(Input, [App]),
+    #{lines := [#{file := File}]} =
+        rebar3_uncovered_source:resolve_files(
+            #{lines => Input, counts => #{}, apps => [App], path_filters => []}
+        ),
     ?assertEqual("test/data/source_app/src/mymod.erl", File).
 
 resolve_files_filters_unknown_modules_test() ->
     App = make_app(fixture_dir(~"source_app")),
     Input = [#{module => nonexistent, line => 1}],
-    ?assertEqual([], rebar3_uncovered_source:resolve_files(Input, [App])).
+    #{lines := []} =
+        rebar3_uncovered_source:resolve_files(
+            #{lines => Input, counts => #{}, apps => [App], path_filters => []}
+        ).
 
 read_regions_zero_context_test() ->
     Regions = read_regions([5], 0),
@@ -69,11 +75,17 @@ find_project_root(Dir) ->
 read_regions(LineNos, Context) ->
     App = make_app(fixture_dir(~"source_app")),
     Input = [#{module => mymod, line => N} || N <- LineNos],
-    Resolved = rebar3_uncovered_source:resolve_files(Input, [App]),
-    Counts = #{mymod => #{N => 0 || N <- LineNos}},
-    rebar3_uncovered_source:read_regions(
-        Resolved, #{context => Context}, Counts
-    ).
+    S = rebar3_uncovered_source:resolve_files(
+        #{
+            lines => Input,
+            counts => #{mymod => #{N => 0 || N <- LineNos}},
+            apps => [App],
+            path_filters => []
+        }
+    ),
+    #{regions := Regions} =
+        rebar3_uncovered_source:read_regions(S#{opts => #{context => Context}}),
+    Regions.
 
 make_app(Dir) ->
     {ok, App0} = rebar_app_info:new(test_app, "0.0.0"),

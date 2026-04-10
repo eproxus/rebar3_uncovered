@@ -25,25 +25,27 @@ init(State) ->
     % elp:ignore W0017
     {ok, rebar_state:add_provider(State, Provider)}.
 
-do(State) ->
+do(RebarState) ->
     % elp:ignore W0017
-    {RawOpts, PathFilters} = rebar_state:command_parsed_args(State),
+    {RawOpts, PathFilters} = rebar_state:command_parsed_args(RebarState),
     Opts = parse_opts(RawOpts),
 
     % elp:ignore W0017
-    Apps = rebar_state:project_apps(State),
-    {Uncovered0, Counts} = rebar3_uncovered_cover:uncovered_lines(Opts, Apps),
-    Uncovered1 = rebar3_uncovered_source:resolve_files(Uncovered0, Apps),
-    Uncovered2 = rebar3_uncovered_git:filter_uncovered(Uncovered1, Opts),
-    Uncovered3 = filter_paths(Uncovered2, PathFilters),
-
-    Regions = rebar3_uncovered_source:read_regions(Uncovered3, Opts, Counts),
-    case rebar3_uncovered_format:format_lines(Regions, Opts) of
-        [] -> ok;
-        % elp:ignore W0017
-        Output -> rebar_api:console("~ts", [Output])
-    end,
-    {ok, State}.
+    Apps = rebar_state:project_apps(RebarState),
+    State = lists:foldl(
+        fun(F, Acc) -> F(Acc) end,
+        #{opts => Opts, apps => Apps, path_filters => PathFilters},
+        [
+            fun rebar3_uncovered_cover:uncovered_lines/1,
+            fun rebar3_uncovered_source:resolve_files/1,
+            fun rebar3_uncovered_git:filter_uncovered/1,
+            fun rebar3_uncovered_source:read_regions/1,
+            fun rebar3_uncovered_format:format_lines/1
+        ]
+    ),
+    % elp:ignore W0017
+    print_output(State),
+    {ok, RebarState}.
 
 format_error(Reason) -> io_lib:format("~p", [Reason]).
 
@@ -120,13 +122,11 @@ resolve_columns() ->
         {error, enotsup} -> 80
     end.
 
-filter_paths(Uncovered, []) ->
-    Uncovered;
-filter_paths(Uncovered, Filters) ->
-    [
-        Line
-     || #{file := File} = Line <:- Uncovered, matches_any_filter(File, Filters)
-    ].
-
-matches_any_filter(File, Filters) ->
-    lists:any(fun(Filter) -> lists:prefix(Filter, File) end, Filters).
+print_output(#{output := [], opts := #{format := raw}}) ->
+    ok;
+print_output(#{output := []}) ->
+    % elp:ignore W0017
+    rebar_api:console("No uncovered lines found", []);
+print_output(#{output := Output}) ->
+    % elp:ignore W0017
+    rebar_api:console("~ts", [Output]).

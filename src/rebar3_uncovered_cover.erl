@@ -10,17 +10,17 @@
 -type line_counts() :: #{module() => #{pos_integer() => non_neg_integer()}}.
 
 % API
--export([uncovered_lines/2]).
+-export([uncovered_lines/1]).
 
 %--- API -----------------------------------------------------------------------
 
-uncovered_lines(#{coverage := Source}, Apps) ->
+uncovered_lines(#{opts := #{coverage := Source}, apps := Apps} = S) ->
     {Pattern, Name} = coverdata_pattern(Source),
     case coverdata_files(Pattern, Apps) of
         [] ->
             % elp:ignore W0017
             rebar_api:warn("No ~s coverdata files found", [Name]),
-            {[], #{}};
+            S#{lines => [], counts => #{}};
         Files ->
             silence_cover(fun() ->
                 lists:foreach(fun cover:import/1, Files),
@@ -29,7 +29,7 @@ uncovered_lines(#{coverage := Source}, Apps) ->
                 Counts = lists:foldl(
                     fun(M, Acc) -> Acc#{M => module_counts(M)} end, #{}, Modules
                 ),
-                {Uncovered, Counts}
+                S#{lines => Uncovered, counts => Counts}
             end)
     end.
 

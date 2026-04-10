@@ -267,12 +267,14 @@ format(Regions, Format, Color, Counts) ->
     format(Regions, Format, Color, Counts, 80).
 
 format(Regions, Format, Color, Counts, Columns) ->
-    rebar3_uncovered_format:format_lines(
-        Regions, #{
+    #{output := Output} = rebar3_uncovered_format:format_lines(#{
+        regions => Regions,
+        opts => #{
             format => Format,
             color => Color,
             context => 2,
             counts => Counts,
             columns => Columns
         }
-    ).
+    }),
+    Output.

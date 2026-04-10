@@ -1,7 +1,7 @@
 -module(rebar3_uncovered_git).
 
 % API
--export([filter_uncovered/2]).
+-export([filter_uncovered/1]).
 
 -ifdef(TEST).
 -export([parse_diff/1]).
@@ -10,15 +10,16 @@
 
 %--- API -----------------------------------------------------------------------
 
-filter_uncovered(Uncovered, #{git := false}) ->
-    Uncovered;
-filter_uncovered(Uncovered, #{git := Mode}) ->
+filter_uncovered(#{opts := #{git := false}} = S) ->
+    S;
+filter_uncovered(#{lines := Uncovered, opts := #{git := Mode}} = S) ->
     Changed = changed_lines(Mode),
-    [
+    Filtered = [
         Line
      || #{file := File, line := LineNo} = Line <:- Uncovered,
         lists:member(LineNo, maps:get(File, Changed, []))
-    ].
+    ],
+    S#{lines := Filtered}.
 
 %--- Internal ------------------------------------------------------------------
 

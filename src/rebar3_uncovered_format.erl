@@ -1,14 +1,14 @@
 -module(rebar3_uncovered_format).
 
 % API
--export([format_lines/2]).
+-export([format_lines/1]).
 
 %--- API -----------------------------------------------------------------------
 
-format_lines(Regions, #{format := raw} = Opts) ->
-    format_raw(Regions, Opts);
-format_lines(Regions, #{format := human} = Opts) ->
-    format_human(Regions, Opts).
+format_lines(#{regions := Regions, opts := #{format := raw} = Opts} = S) ->
+    S#{output => format_raw(Regions, Opts)};
+format_lines(#{regions := Regions, opts := #{format := human} = Opts} = S) ->
+    S#{output => format_human(Regions, Opts)}.
 
 %--- Internal ------------------------------------------------------------------
 

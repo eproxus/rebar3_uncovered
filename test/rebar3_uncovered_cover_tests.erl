@@ -10,18 +10,14 @@ uncovered_lines_test_() ->
     {setup, fun setup/0, fun cleanup/1, fun(App) ->
         [
             {"eunit returns uncovered lines", fun() ->
-                {Result, _} = rebar3_uncovered_cover:uncovered_lines(
-                    #{coverage => eunit}, [
-                        App
-                    ]
+                #{lines := Result} = rebar3_uncovered_cover:uncovered_lines(
+                    #{opts => #{coverage => eunit}, apps => [App]}
                 ),
                 ?assert(length(Result) > 0)
             end},
             {"all entries have module and line keys", fun() ->
-                {Result, _} = rebar3_uncovered_cover:uncovered_lines(
-                    #{coverage => eunit}, [
-                        App
-                    ]
+                #{lines := Result} = rebar3_uncovered_cover:uncovered_lines(
+                    #{opts => #{coverage => eunit}, apps => [App]}
                 ),
                 lists:foreach(
                     fun(Entry) ->
@@ -34,10 +30,8 @@ uncovered_lines_test_() ->
                 )
             end},
             {"contains known uncovered line", fun() ->
-                {Result, _} = rebar3_uncovered_cover:uncovered_lines(
-                    #{coverage => eunit}, [
-                        App
-                    ]
+                #{lines := Result} = rebar3_uncovered_cover:uncovered_lines(
+                    #{opts => #{coverage => eunit}, apps => [App]}
                 ),
                 ?assert(
                     lists:any(
@@ -49,16 +43,14 @@ uncovered_lines_test_() ->
                 )
             end},
             {"aggregate matches wildcard pattern", fun() ->
-                {Result, _} = rebar3_uncovered_cover:uncovered_lines(
-                    #{coverage => aggregate}, [App]
+                #{lines := Result} = rebar3_uncovered_cover:uncovered_lines(
+                    #{opts => #{coverage => aggregate}, apps => [App]}
                 ),
                 ?assert(length(Result) > 0)
             end},
             {"includes multiple modules with uncovered lines", fun() ->
-                {Result, _} = rebar3_uncovered_cover:uncovered_lines(
-                    #{coverage => eunit}, [
-                        App
-                    ]
+                #{lines := Result} = rebar3_uncovered_cover:uncovered_lines(
+                    #{opts => #{coverage => eunit}, apps => [App]}
                 ),
                 Modules = lists:usort([
                     Mod
@@ -67,10 +59,8 @@ uncovered_lines_test_() ->
                 ?assert(length(Modules) > 1)
             end},
             {"counts map has entries for all analyzed modules", fun() ->
-                {_, Counts} = rebar3_uncovered_cover:uncovered_lines(
-                    #{coverage => eunit}, [
-                        App
-                    ]
+                #{counts := Counts} = rebar3_uncovered_cover:uncovered_lines(
+                    #{opts => #{coverage => eunit}, apps => [App]}
                 ),
                 ?assert(map_size(Counts) > 0),
                 maps:foreach(
@@ -94,22 +84,22 @@ uncovered_lines_test_() ->
 no_coverdata_test_() ->
     {setup, fun setup_empty/0, fun cleanup/1, fun(App) ->
         [
-            {"no coverdata returns empty tuple", fun() ->
-                ?assertEqual(
-                    {[], #{}},
+            {"no coverdata returns empty lines and counts", fun() ->
+                #{lines := Lines, counts := Counts} =
                     rebar3_uncovered_cover:uncovered_lines(
-                        #{coverage => eunit}, [App]
-                    )
-                )
+                        #{opts => #{coverage => eunit}, apps => [App]}
+                    ),
+                ?assertEqual([], Lines),
+                ?assertEqual(#{}, Counts)
             end},
             {"ct pattern does not match eunit file", fun() ->
                 App1 = make_app(fixture_dir(~"cover_app")),
-                ?assertEqual(
-                    {[], #{}},
-                    rebar3_uncovered_cover:uncovered_lines(#{coverage => ct}, [
-                        App1
-                    ])
-                )
+                #{lines := Lines, counts := Counts} =
+                    rebar3_uncovered_cover:uncovered_lines(
+                        #{opts => #{coverage => ct}, apps => [App1]}
+                    ),
+                ?assertEqual([], Lines),
+                ?assertEqual(#{}, Counts)
             end}
         ]
     end}.
