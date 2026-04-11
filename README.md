@@ -92,8 +92,7 @@ Positional arguments after `--` are used as file or directory filters.
 
 - **`--context`**, **`-C`**
 
-  Number of covered lines to show around each uncovered line for context. Only
-  applies to `human` format.
+  Number of covered lines to show around each uncovered line for context.
 
     - `<integer>` *(default: `2`)* — number of context lines to show
     - `0` — show only uncovered lines
