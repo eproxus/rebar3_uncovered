@@ -97,6 +97,18 @@ jobs:
           VERSION=$(git-cliff --bumped-version)
           CURRENT=$(git describe --tags --abbrev=0 2>/dev/null || true)
           if [ -n "$CURRENT" ] && [ "$VERSION" = "$CURRENT" ]; then
+            {
+              echo "## No releasable changes since \`${CURRENT}\`"
+              echo ""
+              echo "All commits since \`${CURRENT}\` are skipped by" \
+                "\`cliff.toml\` (ci/build/docs/chore/test/style)."
+              echo "Add a \`feat\`, \`fix\`, \`refactor\`, or \`perf\`" \
+                "commit before releasing."
+              echo ""
+              echo "### Commits since \`${CURRENT}\`"
+              echo ""
+              git log --format='- %s' "${CURRENT}..HEAD"
+            } >> "$GITHUB_STEP_SUMMARY"
             echo "::error::No releasable commits since ${CURRENT} \
           (only ci/build/docs/chore/test/style). Nothing to bump."
             exit 1
