@@ -95,28 +95,35 @@ collect(Port, Acc) ->
     end.
 
 parse_diff(Output) ->
-    Lines = string:split(Output, "\n", all),
-    parse_lines(Lines, undefined, #{}).
-
-parse_lines([], _File, Acc) ->
-    Acc;
-parse_lines(["+++ b/" ++ Path | Rest], _File, Acc) ->
-    parse_lines(Rest, Path, Acc);
-parse_lines(["@@ " ++ _ = Line | Rest], File, Acc) when File =/= undefined ->
-    FileLines = maps:get(File, Acc, #{}),
-    NewLines = #{N => #{} || N <:- parse_hunk(Line)},
-    parse_lines(Rest, File, Acc#{File => maps:merge(FileLines, NewLines)});
-parse_lines([_ | Rest], File, Acc) ->
-    parse_lines(Rest, File, Acc).
-
-parse_hunk(Line) ->
-    case
-        re:run(Line, "\\+(\\d+)(?:,(\\d+))?", [{capture, all_but_first, list}])
-    of
-        {match, [Start, Count]} ->
-            S = list_to_integer(Start),
-            C = list_to_integer(Count),
-            lists:seq(S, S + C - 1);
-        {match, [Start]} ->
-            [list_to_integer(Start)]
+    Re =
+        ~"""
+        ^                                   # line start (multiline)
+        (?:
+            \+\+\+\ b/(\S+)                 # new-file header, capture path
+          |
+            @@\ [^+]*\+(\d+)(?:,(\d+))?     # hunk header: +start[,count]
+        )
+        """,
+    Opts = [
+        multiline, extended, global, unicode, {capture, all_but_first, binary}
+    ],
+    case re:run(Output, Re, Opts) of
+        nomatch -> #{};
+        {match, Matches} -> collect_hunks(Matches, undefined, #{})
     end.
+
+collect_hunks([], _File, Acc) ->
+    Acc;
+collect_hunks([[File] | Rest], _PrevFile, Acc) ->
+    collect_hunks(Rest, unicode:characters_to_list(File), Acc);
+collect_hunks([[<<>>, StartB] | Rest], File, Acc) ->
+    add_hunk(binary_to_integer(StartB), 1, File, Acc, Rest);
+collect_hunks([[<<>>, StartB, CountB] | Rest], File, Acc) ->
+    add_hunk(
+        binary_to_integer(StartB), binary_to_integer(CountB), File, Acc, Rest
+    ).
+
+add_hunk(S, C, File, Acc, Rest) ->
+    FileLines = maps:get(File, Acc, #{}),
+    NewLines = #{N => #{} || N <:- lists:seq(S, S + C - 1)},
+    collect_hunks(Rest, File, Acc#{File => maps:merge(FileLines, NewLines)}).
