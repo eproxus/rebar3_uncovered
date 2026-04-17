@@ -2,7 +2,81 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
-%--- Tests ---------------------------------------------------------------------
+%--- Tests: filter_uncovered ---------------------------------------------------
+
+%% These tests exercise the real git shell-out against the current repository.
+%% They pass an empty files map so the output is deterministic regardless of
+%% what the diff actually contains.
+
+filter_uncovered_disabled_test() ->
+    State = #{files => #{"src/foo.erl" => #{}}, opts => #{git => false}},
+    ?assertEqual(State, rebar3_uncovered_git:filter_uncovered(State)).
+
+filter_uncovered_auto_test() ->
+    State = #{files => #{}, opts => #{git => auto}},
+    ?assertMatch(
+        #{files := #{}}, rebar3_uncovered_git:filter_uncovered(State)
+    ).
+
+filter_uncovered_ref_head_test() ->
+    State = #{files => #{}, opts => #{git => {ref, "HEAD"}}},
+    ?assertMatch(
+        #{files := #{}}, rebar3_uncovered_git:filter_uncovered(State)
+    ).
+
+filter_uncovered_ref_head_tilde_test() ->
+    State = #{files => #{}, opts => #{git => {ref, "HEAD~1"}}},
+    ?assertMatch(
+        #{files := #{}}, rebar3_uncovered_git:filter_uncovered(State)
+    ).
+
+filter_uncovered_staged_test() ->
+    State = #{files => #{}, opts => #{git => staged}},
+    ?assertMatch(
+        #{files := #{}}, rebar3_uncovered_git:filter_uncovered(State)
+    ).
+
+filter_uncovered_unstaged_test() ->
+    State = #{files => #{}, opts => #{git => unstaged}},
+    ?assertMatch(
+        #{files := #{}}, rebar3_uncovered_git:filter_uncovered(State)
+    ).
+
+filter_uncovered_bad_ref_test() ->
+    State = #{
+        files => #{}, opts => #{git => {ref, "definitely-not-a-ref-zzz-9999"}}
+    },
+    ?assertError(
+        {git_command_failed, _, _},
+        rebar3_uncovered_git:filter_uncovered(State)
+    ).
+
+%--- Tests: hide_unchanged -----------------------------------------------------
+
+hide_unchanged_keeps_changed_test() ->
+    Changed = #{5 => #{}},
+    FileLines = #{5 => #{show => true, count => 0}},
+    ?assertEqual(
+        #{5 => #{show => true, count => 0}},
+        rebar3_uncovered_git:hide_unchanged(Changed, FileLines)
+    ).
+
+hide_unchanged_strips_show_from_unchanged_test() ->
+    Changed = #{5 => #{}},
+    FileLines = #{10 => #{show => true, count => 0}},
+    ?assertEqual(
+        #{10 => #{count => 0}},
+        rebar3_uncovered_git:hide_unchanged(Changed, FileLines)
+    ).
+
+hide_unchanged_leaves_no_show_untouched_test() ->
+    Changed = #{},
+    FileLines = #{10 => #{count => 0}},
+    ?assertEqual(
+        FileLines, rebar3_uncovered_git:hide_unchanged(Changed, FileLines)
+    ).
+
+%--- Tests: parse_diff ---------------------------------------------------------
 
 empty_diff_test() ->
     ?assertEqual(#{}, rebar3_uncovered_git:parse_diff("")).

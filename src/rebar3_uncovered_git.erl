@@ -4,8 +4,9 @@
 -export([filter_uncovered/1]).
 
 -ifdef(TEST).
--export([parse_diff/1]).
+-export([parse_diff/1, hide_unchanged/2]).
 -ignore_xref(parse_diff/1).
+-ignore_xref(hide_unchanged/2).
 -endif.
 
 %--- API -----------------------------------------------------------------------
@@ -39,13 +40,59 @@ hide_unchanged(ChangedLines, FileLines) ->
 
 %--- Internal ------------------------------------------------------------------
 
-changed_lines(Mode) ->
-    Output = git_diff(Mode),
-    parse_diff(Output).
+changed_lines(staged) ->
+    parse_diff(git(["diff", "-U0", "--no-color", "--no-ext-diff", "--cached"]));
+changed_lines(unstaged) ->
+    parse_diff(git(["diff", "-U0", "--no-color", "--no-ext-diff"]));
+changed_lines(auto) ->
+    changed_lines({ref, auto_ref()});
+changed_lines({ref, Ref}) ->
+    MergeBase = string:trim(git(["merge-base", Ref, "HEAD"])),
+    parse_diff(git(["diff", "-U0", "--no-color", "--no-ext-diff", MergeBase])).
 
-git_diff(all) -> os:cmd("git diff -U0 --no-color --no-ext-diff HEAD");
-git_diff(staged) -> os:cmd("git diff -U0 --no-color --no-ext-diff --cached");
-git_diff(unstaged) -> os:cmd("git diff -U0 --no-color --no-ext-diff").
+auto_ref() ->
+    first_resolvable(["origin/HEAD", "origin/main", "origin/master", "HEAD"]).
+
+first_resolvable([Ref]) ->
+    Ref;
+first_resolvable([Ref | Rest]) ->
+    try
+        _ = git(["rev-parse", "--verify", "--quiet", Ref]),
+        Ref
+    catch
+        error:{git_command_failed, _, _} -> first_resolvable(Rest)
+    end.
+
+git(Args) ->
+    case os:find_executable("git") of
+        false -> error(git_not_found);
+        Path -> run_git(Path, Args)
+    end.
+
+run_git(Path, Args) ->
+    Port = erlang:open_port(
+        {spawn_executable, Path},
+        [{args, Args}, exit_status, binary, stderr_to_stdout]
+    ),
+    collect(Port, <<>>).
+
+collect(Port, Acc) ->
+    receive
+        {Port, {data, Data}} ->
+            collect(Port, <<Acc/binary, Data/binary>>);
+        {Port, {exit_status, 0}} ->
+            unicode:characters_to_list(Acc);
+        {Port, {exit_status, N}} ->
+            error({git_command_failed, N, unicode:characters_to_list(Acc)})
+    after 300000 ->
+        try
+            port_close(Port)
+        catch
+            _:_ -> ok
+        after
+            error(git_timeout)
+        end
+    end.
 
 parse_diff(Output) ->
     Lines = string:split(Output, "\n", all),

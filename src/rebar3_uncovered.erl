@@ -8,6 +8,11 @@
 -ignore_xref(format_error/1).
 -export([format_error/1]).
 
+-ifdef(TEST).
+-export([parse_opts/1]).
+-ignore_xref(parse_opts/1).
+-endif.
+
 %--- Callbacks -----------------------------------------------------------------
 
 init(State) ->
@@ -30,29 +35,44 @@ do(RebarState) ->
     {RawOpts, PathFilters} = rebar_state:command_parsed_args(RebarState),
     case proplists:get_value(help, RawOpts, false) of
         true ->
-            print_help();
+            print_help(),
+            {ok, RebarState};
         false ->
-            Opts = parse_opts(RawOpts),
-            % elp:ignore W0017
-            Apps = rebar_state:project_apps(RebarState),
-            State = lists:foldl(
-                fun(F, Acc) -> F(Acc) end,
-                #{opts => Opts, apps => Apps, path_filters => PathFilters},
-                [
-                    fun rebar3_uncovered_cover:analyse_lines/1,
-                    fun rebar3_uncovered_git:filter_uncovered/1,
-                    fun rebar3_uncovered_source:build_regions/1,
-                    fun rebar3_uncovered_format:format_lines/1
-                ]
-            ),
-            % elp:ignore W0017
-            print_output(State)
-    end,
-    {ok, RebarState}.
+            try run(RebarState, RawOpts, PathFilters) of
+                ok -> {ok, RebarState}
+            catch
+                error:Reason -> {error, {?MODULE, Reason}}
+            end
+    end.
 
-format_error(Reason) -> io_lib:format("~p", [Reason]).
+format_error({git_command_failed, N, Output}) ->
+    io_lib:format("git exited ~b:~n~ts", [N, Output]);
+format_error(git_not_found) ->
+    "git binary not found in PATH";
+format_error(git_timeout) ->
+    "git command timed out";
+format_error(Reason) ->
+    io_lib:format("~p", [Reason]).
 
 %--- Internal ------------------------------------------------------------------
+
+run(RebarState, RawOpts, PathFilters) ->
+    Opts = parse_opts(RawOpts),
+    % elp:ignore W0017
+    Apps = rebar_state:project_apps(RebarState),
+    State = lists:foldl(
+        fun(F, Acc) -> F(Acc) end,
+        #{opts => Opts, apps => Apps, path_filters => PathFilters},
+        [
+            fun rebar3_uncovered_cover:analyse_lines/1,
+            fun rebar3_uncovered_git:filter_uncovered/1,
+            fun rebar3_uncovered_source:build_regions/1,
+            fun rebar3_uncovered_format:format_lines/1
+        ]
+    ),
+    % elp:ignore W0017
+    print_output(State),
+    ok.
 
 print_help() ->
     getopt:usage(
@@ -63,8 +83,11 @@ opts() ->
     [
         {help, $h, "help", boolean, "Show this help"},
         {git, $g, "git", boolean, "Filter by git diff"},
-        {git_scope, undefined, "git-scope", {string, "all"},
-            "Git diff scope: staged, all, unstaged"},
+        {git_scope, undefined, "git-scope", {string, "auto"},
+            "Git diff scope: staged, unstaged, or a ref. Refs include all"
+            " changes between where they diverged and HEAD. Default 'auto'"
+            " uses trunk, resolved as the first of: origin/HEAD, origin/main,"
+            " origin/master, HEAD."},
         {coverage, undefined, "coverage", {string, "aggregate"},
             "Coverage source: aggregate, eunit, ct"},
         {color, undefined, "color", {string, "auto"},
@@ -93,7 +116,7 @@ parse_opts(RawOpts) ->
         context => 2,
         counts => true,
         git => false,
-        git_scope => all,
+        git_scope => auto,
         columns => resolve_columns()
     },
     Validated = maps:map(fun opt/2, maps:from_list(RawOpts)),
@@ -113,8 +136,9 @@ opt(context, N) when is_integer(N), N >= 0 -> N;
 opt(counts, B) when is_boolean(B) -> B;
 opt(git, B) when is_boolean(B) -> B;
 opt(git_scope, "staged") -> staged;
-opt(git_scope, "all") -> all;
 opt(git_scope, "unstaged") -> unstaged;
+opt(git_scope, "auto") -> auto;
+opt(git_scope, Ref) when is_list(Ref) -> {ref, Ref};
 opt(Name, Value) -> error({invalid_option, Name, Value}).
 
 resolve_git(#{git := true, git_scope := Scope} = Opts) -> Opts#{git := Scope};

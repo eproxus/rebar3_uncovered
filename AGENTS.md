@@ -4,11 +4,11 @@ rebar3_uncovered is a Rebar 3 plugin that reports on uncovered lines from tests.
 
 ## Architecture
 
-* `rebar3_uncovered` — Provider entry point: parses CLI opts, orchestrates the pipeline
-* `rebar3_uncovered_cover` — Imports `.coverdata` files and extracts uncovered lines per module
-* `rebar3_uncovered_git` — Filters uncovered lines by git diff (stub)
-* `rebar3_uncovered_source` — Reads source files and groups uncovered lines into context regions
-* `rebar3_uncovered_format` — Renders regions as human-readable or raw output
+* `rebar3_uncovered`: Provider entry point: parses CLI opts, orchestrates the pipeline
+* `rebar3_uncovered_cover`: Imports `.coverdata` files and extracts uncovered lines per module
+* `rebar3_uncovered_git`: Filters uncovered lines by git diff (stub)
+* `rebar3_uncovered_source`: Reads source files and groups uncovered lines into context regions
+* `rebar3_uncovered_format`: Renders regions as human-readable or raw output
 
 ## Build & Development Commands
 

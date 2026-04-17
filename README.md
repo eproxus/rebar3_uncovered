@@ -12,7 +12,7 @@
 
 A Rebar 3 plugin that reports on uncovered lines from tests. Run it after
 `rebar3 eunit` or `rebar3 ct` to see which lines your tests missed. Use `--git`
-to narrow the report to lines changed since the last commit.
+to narrow the report to lines changed on this branch.
 
 ![Human-readable output](docs/screenshot.png)
 
@@ -52,7 +52,58 @@ rebar3 help uncovered
 
 Positional arguments after `--` are used as file or directory filters.
 
-### Options
+### Git scopes
+
+Git organizes your working state as layers on top of trunk:
+
+```sh
+unstaged   # Edits not yet added to the index
+staged     # Changes added to the index but not committed
+HEAD       # The latest commit on this branch
+HEAD~X     # Some intermediary commit between trunk and HEAD
+trunk      # Base branch (origin/main, origin/master, …)
+```
+
+`--git-scope` picks which layer to diff against, which determines what counts
+as "changed":
+
+- `auto` *(default)*: diff against trunk: branch commits, staged, and
+  unstaged all count
+- `HEAD`: only uncommitted work (staged + unstaged)
+- `staged`: only staged changes
+- `unstaged`: only unstaged changes
+- Any git ref (`origin/main`, `HEAD~1`, a commit SHA, etc.): diff against that
+  ref
+
+### Examples
+
+Show uncovered lines in the dirty working tree before committing:
+
+```console
+rebar3 uncovered --git --git-scope HEAD
+```
+
+Show uncovered lines on this branch against trunk:
+
+```console
+rebar3 uncovered --git
+```
+
+In CI or in LLM tooling, check that all changed lines are covered by tests (raw
+format, no context lines):
+
+```console
+QUIET=1 rebar3 uncovered --git --format=raw --context=0 --counts=false
+```
+
+Show uncovered lines against a specific ref:
+
+```console
+rebar3 uncovered --git --git-scope origin/main
+rebar3 uncovered --git --git-scope HEAD~3
+```
+
+### All Options
 
 - **`--help`**, **`-h`**
 
@@ -65,28 +116,31 @@ Positional arguments after `--` are used as file or directory filters.
 
 - **`--git-scope`**
 
-  Which part of the git diff to consider. Only has effect when `--git` is
-  enabled.
+  Which git diff to consider. Only has effect when `--git` is enabled. Refs
+  include all changes between where they diverged and `HEAD`.
 
-    - `all` *(default)* — both staged and unstaged changes
-    - `staged` — only changes added to the index
-    - `unstaged` — only working tree changes
+    - `auto` *(default)*: diff against trunk, resolved as the first of
+      `origin/HEAD`, `origin/main`, `origin/master`, `HEAD`
+    - `staged`: only changes added to the index
+    - `unstaged`: only working tree changes
+    - any git ref (e.g. `HEAD`, `HEAD~1`, `origin/main`, a commit SHA):
+      diff against that ref
 
 - **`--coverage`**
 
   Which coverage data to use.
 
-    - `aggregate` *(default)* — combine all test suites
-    - `eunit` — only EUnit coverage data
-    - `ct` — only Common Test coverage data
+    - `aggregate` *(default)*: combine all test suites
+    - `eunit`: only EUnit coverage data
+    - `ct`: only Common Test coverage data
 
 - **`--format`**, **`-f`**
 
   Output format.
 
-    - `human` *(default)* — color-coded table with line numbers, coverage counts,
+    - `human` *(default)*: color-coded table with line numbers, coverage counts,
       and source context
-    - `raw` — one line per uncovered line in a grep-like format suitable for
+    - `raw`: one line per uncovered line in a grep-like format suitable for
       scripts, CI, or LLM consumption. Set the environment variable `QUIET=1` to
       suppress Rebar's own log messages for clean output
 
@@ -94,9 +148,9 @@ Positional arguments after `--` are used as file or directory filters.
 
   Number of covered lines to show around each uncovered line for context.
 
-    - `<integer>` *(default: `2`)* — number of context lines to show
-    - `0` — show only uncovered lines
-    - `all` — show the entire function
+    - `<integer>` *(default: `2`)*: number of context lines to show
+    - `0`: show only uncovered lines
+    - `all`: show the entire function
 
 - **`--counts`**
 
@@ -107,9 +161,9 @@ Positional arguments after `--` are used as file or directory filters.
 
   Color output. Respects the `NO_COLOR` environment variable.
 
-    - `auto` *(default)* — enable color when output is a terminal
-    - `always` — force color on
-    - `never` — disable color
+    - `auto` *(default)*: enable color when output is a terminal
+    - `always`: force color on
+    - `never`: disable color
 
 ## Changelog
 
