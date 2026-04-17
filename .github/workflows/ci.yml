@@ -95,6 +95,12 @@ jobs:
         id: version
         run: |
           VERSION=$(git-cliff --bumped-version)
+          CURRENT=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          if [ -n "$CURRENT" ] && [ "$VERSION" = "$CURRENT" ]; then
+            echo "::error::No releasable commits since ${CURRENT} \
+          (only ci/build/docs/chore/test/style). Nothing to bump."
+            exit 1
+          fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Next version: $VERSION"
 
